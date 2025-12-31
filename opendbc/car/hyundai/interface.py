@@ -152,7 +152,7 @@ class CarInterface(CarInterfaceBase):
       ret.steerActuatorDelay = 0.2
 
     if candidate == CAR.HYUNDAI_IONIQ_6:
-      ret.steerActuatorDelay = 0.08  # More responsive steering
+      ret.steerActuatorDelay = 0.16  # Tuned based on Ioniq 5 findings - higher improves smoothness
 
     # Dashcam cars are missing a test route, or otherwise need validation
     # TODO: Optima Hybrid 2017 uses a different SCC12 checksum
