@@ -153,7 +153,7 @@ class CarInterface(CarInterfaceBase):
 
     if candidate == CAR.HYUNDAI_IONIQ_6:
       ret.steerActuatorDelay = 0.16  # Tuned based on Ioniq 5 findings - higher improves smoothness
-      ret.centerToFront = ret.wheelbase * 0.44  # Actual weight distribution is 44% front / 56% rear
+      ret.centerToFront = ret.wheelbase * 0.44  # Actual weight distribution is 56% front / 44% rear
 
     # Dashcam cars are missing a test route, or otherwise need validation
     # TODO: Optima Hybrid 2017 uses a different SCC12 checksum
