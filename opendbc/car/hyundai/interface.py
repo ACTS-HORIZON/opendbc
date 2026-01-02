@@ -152,7 +152,7 @@ class CarInterface(CarInterfaceBase):
       ret.steerActuatorDelay = 0.2
 
     if candidate == CAR.HYUNDAI_IONIQ_6:
-      ret.steerActuatorDelay = 0.16  # Tuned based on Ioniq 5 findings - higher improves smoothness
+      ret.steerActuatorDelay = 0.2  # Higher value reduces highway jerkiness
       ret.centerToFront = ret.wheelbase * 0.44  # Actual weight distribution is 56% front / 44% rear
 
     # Dashcam cars are missing a test route, or otherwise need validation
