@@ -1,24 +1,26 @@
+import time
+
 from opendbc.car import Bus, get_safety_config, structs, uds
 from opendbc.car.hyundai.hyundaicanfd import CanBus
 from opendbc.car.hyundai.values import HyundaiFlags, CAR, DBC, \
                                                    CANFD_UNSUPPORTED_LONGITUDINAL_CAR, \
+                                                   CANFD_SECURITYACCESS_CAR, \
                                                    UNSUPPORTED_LONGITUDINAL_CAR, HyundaiSafetyFlags
 from opendbc.car.hyundai.radar_interface import RADAR_START_ADDR
 from opendbc.car.interfaces import CarInterfaceBase
-from opendbc.car.disable_ecu import disable_ecu
+from opendbc.car.disable_ecu import disable_ecu, ecu_log
 from opendbc.car.hyundai.carcontroller import CarController
 from opendbc.car.hyundai.carstate import CarState
 from opendbc.car.hyundai.radar_interface import RadarInterface
-
-from opendbc.sunnypilot.car.hyundai.escc import ESCC_MSG
-from opendbc.sunnypilot.car.hyundai.longitudinal.helpers import get_longitudinal_tune
-from opendbc.sunnypilot.car.hyundai.values import HyundaiFlagsSP, HyundaiSafetyFlagsSP
 
 ButtonType = structs.CarState.ButtonEvent.Type
 Ecu = structs.CarParams.Ecu
 
 # Cancel button can sometimes be ACC pause/resume button, main button can also enable on some cars
 ENABLE_BUTTONS = (ButtonType.accelCruise, ButtonType.decelCruise, ButtonType.cancel, ButtonType.mainCruise)
+
+# Track when ECU disable happened - used to permanently suppress CAN errors from disabled ECU
+ECU_DISABLE_TIMESTAMP = 0.0
 
 
 class CarInterface(CarInterfaceBase):
@@ -41,8 +43,9 @@ class CarInterface(CarInterfaceBase):
     if ret.flags & HyundaiFlags.CANFD:
       # Shared configuration for CAN-FD cars
       ret.alphaLongitudinalAvailable = candidate not in CANFD_UNSUPPORTED_LONGITUDINAL_CAR
-      if lka_steering and Ecu.adas not in [fw.ecu for fw in car_fw]:
+      if lka_steering and Ecu.adas not in [fw.ecu for fw in car_fw] and candidate not in CANFD_SECURITYACCESS_CAR:
         # this needs to be figured out for cars without an ADAS ECU
+        # Cars in CANFD_SECURITYACCESS_CAR are known to have ADAS ECUs that work with SecurityAccess
         ret.alphaLongitudinalAvailable = False
 
       ret.enableBsm = 0x1ba in fingerprint[CAN.ECAN]
@@ -163,89 +166,37 @@ class CarInterface(CarInterfaceBase):
     return ret
 
   @staticmethod
-  def _get_params_sp(stock_cp: structs.CarParams, ret: structs.CarParamsSP, candidate, fingerprint: dict[int, dict[int, int]],
-                     car_fw: list[structs.CarParams.CarFw], alpha_long: bool, is_release_sp: bool, docs: bool) -> structs.CarParamsSP:
-    # identical logic used in _get_params
-    # "LKA steering" if LKAS or LKAS_ALT messages are seen coming from the camera.
-    # Generally means our LKAS message is forwarded to another ECU (commonly ADAS ECU)
-    # that finally retransmits our steering command in LFA or LFA_ALT to the MDPS.
-    # "LFA steering" if camera directly sends LFA to the MDPS
-    cam_can = CanBus(None, fingerprint).CAM
-    lka_steering = 0x50 in fingerprint[cam_can] or 0x110 in fingerprint[cam_can]
-    CAN = CanBus(None, fingerprint, lka_steering)
+  def init(CP, can_recv, can_send, communication_control=None):
+    global ECU_DISABLE_TIMESTAMP
+    from opendbc.car.carlog import carlog
+    carlog.warning("=== HyundaiCarInterface.init() CALLED ===")
+    carlog.warning(f"openpilotLongitudinalControl: {CP.openpilotLongitudinalControl}")
+    carlog.warning(f"flags: {CP.flags}")
+    carlog.warning(f"CANFD_CAMERA_SCC flag: {bool(CP.flags & HyundaiFlags.CANFD_CAMERA_SCC)}")
+    carlog.warning(f"CAMERA_SCC flag: {bool(CP.flags & HyundaiFlags.CAMERA_SCC)}")
 
-    if not stock_cp.flags & HyundaiFlags.CANFD:
-      # TODO-SP: add route with ESCC message for process replay
-      if ESCC_MSG in fingerprint[0]:
-        ret.flags |= HyundaiFlagsSP.ENHANCED_SCC.value
-
-    if ret.flags & HyundaiFlagsSP.ENHANCED_SCC:
-      ret.safetyParam |= HyundaiSafetyFlagsSP.ESCC
-      stock_cp.radarUnavailable = False
-
-    if stock_cp.flags & HyundaiFlags.HAS_LDA_BUTTON:
-      ret.safetyParam |= HyundaiSafetyFlagsSP.HAS_LDA_BUTTON
-
-    if stock_cp.flags & (HyundaiFlags.CANFD_CAMERA_SCC | HyundaiFlags.CAMERA_SCC):
-      stock_cp.radarUnavailable = False
-
-    if stock_cp.flags & HyundaiFlags.ALT_LIMITS_2:
-      stock_cp.dashcamOnly = False
-
-    if ret.flags & HyundaiFlagsSP.NON_SCC:
-      stock_cp.alphaLongitudinalAvailable = False
-      stock_cp.openpilotLongitudinalControl = False
-      stock_cp.pcmCruise = True
-      ret.safetyParam |= HyundaiSafetyFlagsSP.NON_SCC
-
-    # untested non-SCC platforms, need user validations
-    if stock_cp.carFingerprint in (CAR.HYUNDAI_BAYON_1ST_GEN_NON_SCC, CAR.KIA_FORTE_2021_NON_SCC,
-                                   CAR.KIA_SELTOS_2023_NON_SCC, CAR.GENESIS_G70_2021_NON_SCC):
-      stock_cp.dashcamOnly = True
-
-    if stock_cp.flags & HyundaiFlags.CANFD:
-      if 0x1fa in fingerprint[CAN.ECAN]:
-        ret.flags |= HyundaiFlagsSP.SPEED_LIMIT_AVAILABLE.value
-    else:
-      # Detect smartMDPS, which bypasses EPS low-speed lockout, allowing sunnypilot to send steering commands down to 0
-      if 0x2AA in fingerprint[0]:
-        stock_cp.minSteerSpeed = 0.0
-        stock_cp.flags &= ~HyundaiFlags.MIN_STEER_32_MPH.value
-
-      if 0x544 in fingerprint[0]:
-        ret.flags |= HyundaiFlagsSP.SPEED_LIMIT_AVAILABLE.value
-
-      if 0x53E in fingerprint[2]:
-        ret.flags |= HyundaiFlagsSP.HAS_LKAS12.value
-
-    ret.intelligentCruiseButtonManagementAvailable = not (stock_cp.flags & HyundaiFlags.CANFD_ALT_BUTTONS)
-
-    return ret
-
-  @staticmethod
-  def _get_longitudinal_tuning_sp(stock_cp: structs.CarParams, ret: structs.CarParamsSP) -> structs.CarParamsSP:
-    if ret.flags & (HyundaiFlagsSP.LONG_TUNING_DYNAMIC | HyundaiFlagsSP.LONG_TUNING_PREDICTIVE):
-      get_longitudinal_tune(stock_cp)
-
-    return ret
-
-  @staticmethod
-  def init(CP, CP_SP, can_recv, can_send, communication_control=None):
-    # 0x80 silences response
+    # Don't use 0x80 (suppress response) so we can see ECU's actual response for debugging
     if communication_control is None:
-      communication_control = bytes([uds.SERVICE_TYPE.COMMUNICATION_CONTROL, 0x80 | uds.CONTROL_TYPE.DISABLE_RX_DISABLE_TX, uds.MESSAGE_TYPE.NORMAL])
+      communication_control = bytes([uds.SERVICE_TYPE.COMMUNICATION_CONTROL, uds.CONTROL_TYPE.DISABLE_RX_DISABLE_TX, uds.MESSAGE_TYPE.NORMAL])
 
-    if CP.openpilotLongitudinalControl and not ((CP.flags & (HyundaiFlags.CANFD_CAMERA_SCC | HyundaiFlags.CAMERA_SCC)) or
-                                                (CP_SP.flags & HyundaiFlagsSP.ENHANCED_SCC)):
+    if CP.openpilotLongitudinalControl and not (CP.flags & (HyundaiFlags.CANFD_CAMERA_SCC | HyundaiFlags.CAMERA_SCC)):
       addr, bus = 0x7d0, CanBus(CP).ECAN if CP.flags & HyundaiFlags.CANFD else 0
       if CP.flags & HyundaiFlags.CANFD_LKA_STEERING.value:
         addr, bus = 0x730, CanBus(CP).ECAN
 
-      # HDA2 cars with CANFD_NO_RADAR_DISABLE need SecurityAccess + state-aware timing
+      # HDA2 cars with CANFD_NO_RADAR_DISABLE need SecurityAccess handshake
       # According to field testing: ECU disable must happen in IGN_ON state (park gear)
       # BEFORE entering READY mode, otherwise it causes dash errors and doesn't stick
       security_access_needed = bool(CP.flags & HyundaiFlags.CANFD_NO_RADAR_DISABLE)
-      disable_ecu(can_recv, can_send, bus=bus, addr=addr, com_cont_req=communication_control, security_access=security_access_needed)
+      ecu_log(f"=== ECU DISABLE: addr=0x{addr:x}, bus={bus}, security_access={security_access_needed} ===")
+      ecu_disabled = disable_ecu(can_recv, can_send, bus=bus, addr=addr, com_cont_req=communication_control, security_access=security_access_needed)
+
+      # Only enable CAN error suppression if ECU disable actually succeeded
+      if ecu_disabled:
+        ECU_DISABLE_TIMESTAMP = time.monotonic()
+        ecu_log(f"=== ECU DISABLE DONE - CAN error suppression enabled ===")
+      else:
+        ecu_log(f"=== ECU DISABLE FAILED - CAN error suppression NOT enabled (start from IGN-ON, not READY) ===")
 
     # for blinkers
     if CP.flags & HyundaiFlags.ENABLE_BLINKERS:
@@ -255,3 +206,37 @@ class CarInterface(CarInterfaceBase):
   def deinit(CP, can_recv, can_send):
     communication_control = bytes([uds.SERVICE_TYPE.COMMUNICATION_CONTROL, 0x80 | uds.CONTROL_TYPE.ENABLE_RX_ENABLE_TX, uds.MESSAGE_TYPE.NORMAL])
     CarInterface.init(CP, can_recv, can_send, communication_control)
+
+  def update(self, can_packets):
+    # Call base class update - returns (CarState, CarStateSP) tuple
+    ret, ret_sp = super().update(can_packets)
+
+    # When ECU disable has been done for longitudinal control, we need to handle CAN errors carefully:
+    # - TIMEOUT errors (messages stop coming): Expected after ECU disable, should be suppressed
+    # - COUNTER errors (checksum/counter failures): Real CAN problems, should NOT be suppressed
+    global ECU_DISABLE_TIMESTAMP
+    if ECU_DISABLE_TIMESTAMP > 0 and not ret.canValid:
+      # Check if any parser has counter/checksum errors (real CAN issues)
+      has_counter_errors = False
+      for cp in self.can_parsers.values():
+        if cp is not None:
+          for state in cp.message_states.values():
+            if state.counter_fail >= 5:  # MAX_BAD_COUNTER from parser.py
+              has_counter_errors = True
+              ecu_log(f"REAL CAN ERROR: {state.name} counter_fail={state.counter_fail}")
+              break
+        if has_counter_errors:
+          break
+
+      if has_counter_errors:
+        # Real CAN error - don't suppress, let it through
+        ecu_log("ECU_DISABLE: NOT suppressing canValid - counter errors detected")
+      else:
+        # Only timeout errors (expected after ECU disable) - suppress
+        elapsed = time.monotonic() - ECU_DISABLE_TIMESTAMP
+        # Log occasionally to confirm this is working (every ~10 seconds)
+        if int(elapsed) % 10 == 0 and elapsed - int(elapsed) < 0.1:
+          ecu_log(f"ECU_DISABLE: suppressing timeout error (elapsed={elapsed:.0f}s)")
+        ret.canValid = True
+
+    return ret, ret_sp
