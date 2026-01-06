@@ -381,10 +381,32 @@ static safety_config hyundai_canfd_init(uint16_t param) {
   return ret;
 }
 
+static bool hyundai_canfd_fwd_hook(int bus_num, int addr) {
+  bool block_msg = false;
+
+  // When openpilot longitudinal is enabled, block SCC_CONTROL from ADAS ECU
+  // This allows us to take over longitudinal control while keeping BSM, AEB, and radar tracks
+  if (hyundai_longitudinal) {
+    // Block SCC_CONTROL (0x1A0) from being forwarded
+    // Openpilot will send its own 0x1A0 messages instead
+    if (addr == 0x1a0) {
+      block_msg = true;
+    }
+  }
+
+  // Allow all other messages to be forwarded normally
+  // This includes:
+  // - 0x1BA (BSM - Blind Spot Monitoring)
+  // - 0x3BD-0x3C4 (Radar tracking messages)
+  // - All other ADAS ECU messages for AEB, etc.
+  return block_msg;
+}
+
 const safety_hooks hyundai_canfd_hooks = {
   .init = hyundai_canfd_init,
   .rx = hyundai_canfd_rx_hook,
   .tx = hyundai_canfd_tx_hook,
+  .fwd = hyundai_canfd_fwd_hook,
   .get_counter = hyundai_canfd_get_counter,
   .get_checksum = hyundai_canfd_get_checksum,
   .compute_checksum = hyundai_common_canfd_compute_checksum,
