@@ -164,7 +164,6 @@ class CarInterface(CarInterfaceBase):
 
     if candidate == CAR.HYUNDAI_IONIQ_6:
       ret.stopAccel = -3.5
-      ret.stoppingDecelRate = 1.2
 
     # Dashcam cars are missing a test route, or otherwise need validation
     # TODO: Optima Hybrid 2017 uses a different SCC12 checksum

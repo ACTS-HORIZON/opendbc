@@ -66,11 +66,12 @@ CAR_SPECIFIC_CONFIGS = {
     jerk_limits=4.5,
   ),
   CAR.HYUNDAI_IONIQ_6: CarTuningConfig(
-    stopping_decel_rate=0.6,
-    v_ego_stopping=0.30,
-    lookahead_jerk_bp=[2., 5., 20.],
-    lookahead_jerk_upper_v=[0.35, 0.8, 1.2],
-    lookahead_jerk_lower_v=[0.25, 0.5, 0.6],
-    jerk_limits=5.0,
+    stopping_decel_rate=0.8,
+    v_ego_stopping=0.50,
+    v_ego_starting=0.50,
+    lookahead_jerk_bp=[2., 4., 20.],
+    lookahead_jerk_upper_v=[0.35, 0.6, 1.0],
+    lookahead_jerk_lower_v=[0.2, 0.4, 0.5],
+    jerk_limits=4.0,
   )
 }
