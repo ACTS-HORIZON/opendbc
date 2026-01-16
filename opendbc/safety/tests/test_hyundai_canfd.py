@@ -34,7 +34,7 @@ class TestHyundaiCanfdBase(HyundaiButtonBase, common.CarSafetyTest, common.Drive
 
   MAX_RT_DELTA = 250
 
-  DRIVER_TORQUE_ALLOWANCE = 350
+  DRIVER_TORQUE_ALLOWANCE = 200
   DRIVER_TORQUE_FACTOR = 3
 
   # Safety around steering req bit

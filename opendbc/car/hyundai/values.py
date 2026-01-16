@@ -28,10 +28,10 @@ class CarControllerParams:
 
     if CP.flags & HyundaiFlags.CANFD:
       self.STEER_MAX = 409
-      self.STEER_DRIVER_ALLOWANCE = 350
+      self.STEER_DRIVER_ALLOWANCE = 200
       self.STEER_DRIVER_MULTIPLIER = 3
       self.STEER_THRESHOLD = 250
-      self.STEER_DELTA_UP = 3
+      self.STEER_DELTA_UP = 2
       self.STEER_DELTA_DOWN = 3
 
     # To determine the limit for your car, find the maximum value that the stock LKAS will request.
@@ -348,7 +348,7 @@ class CAR(Platforms):
   )
   HYUNDAI_IONIQ_6 = HyundaiCanFDPlatformConfig(
     [HyundaiCarDocs("Hyundai Ioniq 6 (with HDA II) 2023-25", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p]))],
-    HYUNDAI_IONIQ_5.specs,
+    CarSpecs(mass=1948, wheelbase=2.97, steerRatio=14.26, tireStiffnessFactor=1.0),
     flags=HyundaiFlags.EV | HyundaiFlags.CANFD_NO_RADAR_DISABLE,
   )
   HYUNDAI_TUCSON_4TH_GEN = HyundaiCanFDPlatformConfig(
