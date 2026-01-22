@@ -29,10 +29,10 @@ class TestHyundaiCanfdBase(HyundaiButtonBase, common.CarSafetyTest, common.Drive
   FWD_BLACKLISTED_ADDRS = {2: [0x50, 0x2a4]}
 
   MAX_RATE_UP = 3
-  MAX_RATE_DOWN = 3
+  MAX_RATE_DOWN = 4
   MAX_TORQUE_LOOKUP = [0], [410]
 
-  MAX_RT_DELTA = 250
+  MAX_RT_DELTA = 350
 
   DRIVER_TORQUE_ALLOWANCE = 200
   DRIVER_TORQUE_FACTOR = 3
