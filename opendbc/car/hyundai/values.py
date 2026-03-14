@@ -28,7 +28,7 @@ class CarControllerParams:
 
     if CP.flags & HyundaiFlags.CANFD:
       self.STEER_MAX = 409
-      self.STEER_DRIVER_ALLOWANCE = 200
+      self.STEER_DRIVER_ALLOWANCE = 300
       self.STEER_DRIVER_MULTIPLIER = 2
       self.STEER_THRESHOLD = 200
       self.STEER_DELTA_UP = 3
@@ -61,14 +61,14 @@ class CarControllerParams:
   def update(self, CP, vEgoRaw):
     if CP.flags & HyundaiFlags.CANFD:
       if vEgoRaw < 12.:
-        self.STEER_DELTA_UP = 9
-        self.STEER_DELTA_DOWN = 9
+        self.STEER_DELTA_UP = 8
+        self.STEER_DELTA_DOWN = 10
       elif vEgoRaw < 19.:
-        self.STEER_DELTA_UP = 6
-        self.STEER_DELTA_DOWN = 8
+        self.STEER_DELTA_UP = 5
+        self.STEER_DELTA_DOWN = 7
       elif vEgoRaw < 26.:
-        self.STEER_DELTA_UP = 4
-        self.STEER_DELTA_DOWN = 5
+        self.STEER_DELTA_UP = 3
+        self.STEER_DELTA_DOWN = 4
       else:
         self.STEER_DELTA_UP = 2
         self.STEER_DELTA_DOWN = 3
