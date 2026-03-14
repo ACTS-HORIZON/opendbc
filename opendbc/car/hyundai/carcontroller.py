@@ -68,6 +68,7 @@ class CarController(CarControllerBase, EsccCarController, LeadDataCarController,
     self.last_button_frame = 0
 
   def update(self, CC, CC_SP, CS, now_nanos):
+    self.params.update(self.CP, CS.out.vEgoRaw)
     EsccCarController.update(self, CS)
     LeadDataCarController.update(self, CC_SP)
     MadsCarController.update(self, self.CP, CC, CC_SP, self.frame)
