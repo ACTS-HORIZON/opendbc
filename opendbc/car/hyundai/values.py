@@ -68,7 +68,7 @@ class CarControllerParams:
         self.STEER_DELTA_DOWN = 7
       elif vEgoRaw < 26.:
         self.STEER_DELTA_UP = 3
-        self.STEER_DELTA_DOWN = 4
+        self.STEER_DELTA_DOWN = 3
       else:
         self.STEER_DELTA_UP = 2
         self.STEER_DELTA_DOWN = 3
