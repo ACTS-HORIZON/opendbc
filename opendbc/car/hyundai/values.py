@@ -64,14 +64,14 @@ class CarControllerParams:
         self.STEER_DELTA_UP = 8
         self.STEER_DELTA_DOWN = 10
       elif vEgoRaw < 15.:
-        self.STEER_DELTA_UP = 4
-        self.STEER_DELTA_DOWN = 7
+        self.STEER_DELTA_UP = 5
+        self.STEER_DELTA_DOWN = 8
       elif vEgoRaw < 22.:
+        self.STEER_DELTA_UP = 4
+        self.STEER_DELTA_DOWN = 5
+      else:
         self.STEER_DELTA_UP = 3
         self.STEER_DELTA_DOWN = 4
-      else:
-        self.STEER_DELTA_UP = 2
-        self.STEER_DELTA_DOWN = 3
 
 
 class HyundaiSafetyFlags(IntFlag):
