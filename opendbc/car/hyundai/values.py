@@ -60,8 +60,8 @@ class CarControllerParams:
 
   def update(self, CP, vEgoRaw):
     if CP.flags & HyundaiFlags.CANFD:
-      self.STEER_DELTA_UP = 6
-      self.STEER_DELTA_DOWN = 8
+      self.STEER_DELTA_UP = 8
+      self.STEER_DELTA_DOWN = 10
 #      if vEgoRaw < 12.:
 #        self.STEER_DELTA_UP = 8
 #        self.STEER_DELTA_DOWN = 10
