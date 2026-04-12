@@ -45,7 +45,7 @@ def create_steering_messages(packer, CP, CAN, enabled, lat_active, apply_torque,
     "ActToiSta": 1 if lat_active else 0,
     "LKA_UsmMod": 0,  # hide LKAS settings
     "LKA_RcgSta": 0,
-    "Damping_Gain": 100,  # can potentially tuned for better perf [3, 200]
+    "Damping_Gain": 150,  # can potentially tuned for better perf [3, 200]
   }
 
   ret = []
