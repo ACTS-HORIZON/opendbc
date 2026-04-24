@@ -32,16 +32,16 @@ class LatControlInputs(NamedTuple):
 TorqueFromLateralAccelCallbackTypeTorqueSpace = Callable[[LatControlInputs, structs.CarParams.LateralTorqueTuning, bool], float]
 
 
-def _get_speed_dep_config():
+def get_speed_dep_config():
   """Load speed-dependent torque config from toml. Cached after first call."""
-  if not hasattr(_get_speed_dep_config, '_cache'):
+  if not hasattr(get_speed_dep_config, '_cache'):
     import os
     import tomllib
     from opendbc.car.common.basedir import BASEDIR
     path = os.path.join(BASEDIR, 'torque_data/speed_dependent.toml')
     with open(path, 'rb') as f:
-      _get_speed_dep_config._cache = tomllib.load(f)
-  return _get_speed_dep_config._cache
+      get_speed_dep_config._cache = tomllib.load(f)
+  return get_speed_dep_config._cache
 
 
 class CarInterfaceBaseSP:
@@ -64,7 +64,7 @@ class CarInterfaceBaseSP:
     if hasattr(self, '_speed_dep'):
       return
     self._speed_dep = False
-    cfg = _get_speed_dep_config().get(self.CP.carFingerprint)
+    cfg = get_speed_dep_config().get(self.CP.carFingerprint)
     if cfg is not None:
       self._speed_dep = True
       self._speed_dep_speed_bp = list(cfg['speed_bp'])         # bin centers (m/s)
