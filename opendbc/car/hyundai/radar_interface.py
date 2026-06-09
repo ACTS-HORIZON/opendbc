@@ -45,7 +45,11 @@ def get_radar_can_parser(CP, radar_config):
     return None
   messages = [(f"RADAR_TRACK_{addr:x}", radar_config.frequency)
               for addr in range(radar_config.start_addr, radar_config.start_addr + radar_config.msg_count)]
-  return CANParser(DBC[CP.carFingerprint][Bus.radar], messages, radar_config.bus)
+  try:
+    return CANParser(DBC[CP.carFingerprint][Bus.radar], messages, radar_config.bus)
+  except Exception:
+    # fail-soft: missing/bad radar DBC must never block car recognition (card builds this pre-carParams)
+    return None
 
 
 class RadarInterface(RadarInterfaceBase, RadarInterfaceExt):
