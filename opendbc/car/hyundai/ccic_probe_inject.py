@@ -8,9 +8,11 @@ TX allowlist (see hyundai_canfd.h: 0x161/0x162 added). Set "enabled": false to s
 """
 import json
 import os
+import shutil
 import time
 
 CONFIG_PATH = "/data/ccic_probe.json"
+DEFAULT_PATH = os.path.join(os.path.dirname(__file__), "ccic_probe_default.json")
 
 
 class CcicProbe:
@@ -25,6 +27,12 @@ class CcicProbe:
     if now - self._last_check < 1.0:
       return
     self._last_check = now
+    if not os.path.exists(CONFIG_PATH) and os.path.exists(DEFAULT_PATH):
+      try:
+        shutil.copyfile(DEFAULT_PATH, CONFIG_PATH)
+        print('[ccic_probe] seeded /data/ccic_probe.json from repo default')
+      except Exception as e:
+        print('[ccic_probe] seed failed:', e)
     try:
       m = os.path.getmtime(CONFIG_PATH)
       if m != self._mtime:
