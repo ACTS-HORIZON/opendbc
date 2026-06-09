@@ -188,9 +188,12 @@ class HyundaiNonSccPlatformConfig(PlatformConfig):
 @dataclass
 class HyundaiCanFDPlatformConfig(PlatformConfig):
   dbc_dict: DbcDict = field(default_factory=lambda: {Bus.pt: "hyundai_canfd_generated"})
+  radar_dbc: str | None = None
 
   def init(self):
     self.flags |= HyundaiFlags.CANFD
+    if self.radar_dbc is not None:
+      self.dbc_dict = {Bus.pt: "hyundai_canfd_generated", Bus.radar: self.radar_dbc}
 
 
 class CAR(Platforms):
@@ -582,6 +585,7 @@ class CAR(Platforms):
     ],
     CarSpecs(mass=2205, wheelbase=2.9, steerRatio=17.6),
     flags=HyundaiFlags.EV,
+    radar_dbc="hyundai_mrr30_radar_generated",
   )
   GENESIS_G70 = HyundaiPlatformConfig(
     [HyundaiCarDocs("Genesis G70 2018", "All", car_parts=CarParts.common([CarHarness.hyundai_f]))],
