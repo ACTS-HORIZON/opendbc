@@ -7,7 +7,6 @@ from opendbc.car.hyundai import hyundaicanfd, hyundaican
 from opendbc.car.hyundai.hyundaicanfd import CanBus
 from opendbc.car.hyundai.values import HyundaiFlags, Buttons, CarControllerParams, CAR
 from opendbc.car.interfaces import CarControllerBase
-from opendbc.car.hyundai.ccic_probe_inject import CcicProbe
 
 from opendbc.sunnypilot.car.hyundai.escc import EsccCarController
 from opendbc.sunnypilot.car.hyundai.icbm import IntelligentCruiseButtonManagementInterface
@@ -74,7 +73,6 @@ class CarController(CarControllerBase, EsccCarController, LeadDataCarController,
     self.car_fingerprint = CP.carFingerprint
     self.last_button_frame = 0
     self.cancel_counter = 0
-    self.ccic_probe = CcicProbe()
 
   def update(self, CC, CC_SP, CS, now_nanos):
     EsccCarController.update(self, CS)
@@ -254,8 +252,5 @@ class CarController(CarControllerBase, EsccCarController, LeadDataCarController,
             for _ in range(20):
               can_sends.append(hyundaicanfd.create_buttons(self.packer, self.CP, self.CAN, CS.buttons_counter + 1, Buttons.RES_ACCEL))
             self.last_button_frame = self.frame
-
-    # ccIC probe (config-driven, /data/ccic_probe.json)
-    can_sends.extend(self.ccic_probe.msgs(self.packer, self.frame))
 
     return can_sends
