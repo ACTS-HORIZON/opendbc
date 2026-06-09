@@ -35,8 +35,13 @@ class CanBus(CanBusBase):
   def CAM(self):
     return self._cam
 
-
-def create_steering_messages(packer, CP, CAN, enabled, lat_active, apply_torque, lkas_icon):
+def create_steering_messages(packer, CP, CAN, enabled, lat_active, apply_torque, lkas_icon,
+                             left_lane_visible=False, right_lane_visible=False):
+  # LKA_RcgSta: 0=none, 1=left, 2=right, 3=both (camera's normal driving value is 3)
+  lane_rcg = (3 if (left_lane_visible and right_lane_visible)
+              else 1 if left_lane_visible
+              else 2 if right_lane_visible
+              else 0)
   values = {
     "LKA_OptUsmSta": 2,
     "LKA_SysIndReq": lkas_icon,
@@ -44,7 +49,7 @@ def create_steering_messages(packer, CP, CAN, enabled, lat_active, apply_torque,
     "LKA_SysWrn": 0,
     "ActToiSta": 1 if lat_active else 0,
     "LKA_UsmMod": 0,  # hide LKAS settings
-    "LKA_RcgSta": 0,
+    "LKA_RcgSta": lane_rcg,
     "Damping_Gain": 100,  # can potentially tuned for better perf [3, 200]
   }
 
