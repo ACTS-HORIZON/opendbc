@@ -45,11 +45,11 @@ def create_steering_messages(packer, CP, CAN, enabled, lat_active, apply_torque,
               else 0)
   values = {
     "LKA_OptUsmSta": 2,
-    "LKA_SysIndReq": lkas_icon,
+    "LKA_SysIndReq": 3 if (left_lane_depart or right_lane_depart) else lkas_icon,  # TEST: stock=3 on departure
     "StrTqReqVal": apply_torque,
     "LKA_SysWrn": 0,
     "ActToiSta": 1 if lat_active else 0,
-    "LKA_UsmMod": 0,  # hide LKAS settings
+    "LKA_UsmMod": 1,  # TEST: stock sends 1 during LDW; 0 may disable the wheel haptic
     "LKA_RcgSta": lane_rcg,
     "LKA_LHLnWrnSta": 1 if left_lane_depart else 0,   # 1 = lane-departure warning (left)
     "LKA_RHLnWrnSta": 1 if right_lane_depart else 0,  # 1 = lane-departure warning (right)
