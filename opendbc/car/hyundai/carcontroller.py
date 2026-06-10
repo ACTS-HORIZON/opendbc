@@ -73,6 +73,8 @@ class CarController(CarControllerBase, EsccCarController, LeadDataCarController,
     self.car_fingerprint = CP.carFingerprint
     self.last_button_frame = 0
     self.cancel_counter = 0
+    self.left_depart_latch = 0
+    self.right_depart_latch = 0
 
   def update(self, CC, CC_SP, CS, now_nanos):
     EsccCarController.update(self, CS)
@@ -202,10 +204,17 @@ class CarController(CarControllerBase, EsccCarController, LeadDataCarController,
     lka_steering_long = lka_steering and self.CP.openpilotLongitudinalControl
 
     # steering control
+    # latch lane-departure ~0.7s so the cluster warning/haptic gets a sustained trigger
+    if hud_control.leftLaneDepart:
+      self.left_depart_latch = 70
+    if hud_control.rightLaneDepart:
+      self.right_depart_latch = 70
+    self.left_depart_latch = max(0, self.left_depart_latch - 1)
+    self.right_depart_latch = max(0, self.right_depart_latch - 1)
     can_sends.extend(hyundaicanfd.create_steering_messages(
       self.packer, self.CP, self.CAN, CC.enabled, apply_steer_req, apply_torque, self.lkas_icon,
       hud_control.leftLaneVisible, hud_control.rightLaneVisible,
-      hud_control.leftLaneDepart, hud_control.rightLaneDepart))
+      self.left_depart_latch > 0, self.right_depart_latch > 0))
 
     # prevent LFA from activating on LKA steering cars by sending "no lane lines detected" to ADAS ECU
     if self.frame % 5 == 0 and lka_steering:
