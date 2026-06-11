@@ -64,6 +64,7 @@ class CarState(CarStateBase, EsccCarStateBase, MadsCarState, CarStateExt):
     self.buttons_counter = 0
 
     self.cruise_info = {}
+    self.fr_cmr_02 = None
 
     # On some cars, CLU15->CF_Clu_VehicleSpeed can oscillate faster than the dash updates. Sample at 5 Hz
     self.cluster_speed = 0
@@ -299,6 +300,11 @@ class CarState(CarStateBase, EsccCarStateBase, MadsCarState, CarStateExt):
     if self.CP.flags & HyundaiFlags.CANFD_LKA_STEER_MSG:
       self.lfa_block_msg = copy.copy(cp_cam.vl["CAM_0x362"] if self.CP.flags & HyundaiFlags.CANFD_LKA_STEER_MSG_ALT
                                           else cp_cam.vl["CAM_0x2a4"])
+
+    # stock camera ISLW/ISLA message, retransmitted on ECAN with the speed limit display overridden (camera copy is
+    # blocked from forwarding by safety). Only LFA-steering cars have the camera behind the panda for this message.
+    if self.CP_SP.flags & HyundaiFlagsSP.SPEED_LIMIT_AVAILABLE and not self.CP.flags & HyundaiFlags.CANFD_LKA_STEER_MSG:
+      self.fr_cmr_02 = copy.copy(cp_cam.vl["FR_CMR_02_100ms"])
 
     MadsCarState.update_mads_canfd(self, ret, can_parsers)
 

@@ -81,6 +81,21 @@ def create_suppress_lfa(packer, CAN, lfa_block_msg, lka_steering_alt):
   return packer.make_can_msg(suppress_msg, CAN.ACAN, values)
 
 
+def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu):
+  # retransmit the camera's ISLW/ISLA message (its copy is blocked from forwarding by safety),
+  # overriding the cluster speed limit sign with openpilot's when it has one to show
+  values = {s: v for s, v in stock_values.items() if s != "CHECKSUM"}
+
+  speed_limit_clu = int(round(speed_limit_clu))
+  if speed_limit_clu > 0:
+    values["ISLW_SpdCluMainDis"] = min(speed_limit_clu, 0xFC)  # valid range 0x01-0xFC, unit follows cluster
+    values["ISLW_SpdNaviMainDis"] = min(speed_limit_clu, 0xFC)
+    if values["ISLW_SysSta"] == 0:
+      values["ISLW_SysSta"] = 1  # presumed "valid": cluster ignores the sign value while SysSta reads invalid
+
+  return packer.make_can_msg("FR_CMR_02_100ms", CAN.ECAN, values)
+
+
 def create_buttons(packer, CP, CAN, cnt, btn):
   values = {
     "COUNTER": cnt,
