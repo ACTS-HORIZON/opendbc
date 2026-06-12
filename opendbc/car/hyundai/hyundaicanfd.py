@@ -1,8 +1,10 @@
 import numpy as np
-from opendbc.car import CanBusBase
+from opendbc.car import CanBusBase, structs
 from opendbc.car.crc import CRC16_XMODEM
 from opendbc.car.hyundai.values import HyundaiFlags
 from opendbc.sunnypilot.car.hyundai.lead_data_ext import CanFdLeadData
+
+SpeedLimitPrompt = structs.CarControl.HUDControl.SpeedLimitPrompt
 
 
 class CanBus(CanBusBase):
@@ -81,7 +83,7 @@ def create_suppress_lfa(packer, CAN, lfa_block_msg, lka_steering_alt):
   return packer.make_can_msg(suppress_msg, CAN.ACAN, values)
 
 
-def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu):
+def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu, speed_limit_prompt):
   # retransmit the camera's ISLW/ISLA message (its copy is blocked from forwarding by safety),
   # overriding the cluster speed limit sign with openpilot's when it has one to show.
   # CHECKSUM/COUNTER are dropped so the packer generates a clean monotonic stream: resampling the
@@ -92,6 +94,13 @@ def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu):
   if speed_limit_clu > 0:
     values["ISLW_SpdCluMainDis"] = min(speed_limit_clu, 0xFC)  # valid range 0x01-0xFC, unit follows cluster
     values["ISLW_SpdNaviMainDis"] = min(speed_limit_clu, 0xFC)
+
+  # set speed change prompt, the stock MSLA popup with a flashing sign while the change is pending
+  if speed_limit_prompt == SpeedLimitPrompt.willChange:
+    values["ISLA_Popup"] = 1  # MSLA Speed will Change
+    values["ISLA_SymFlashMod"] = 1  # Flashing Sign
+  elif speed_limit_prompt == SpeedLimitPrompt.hasChanged:
+    values["ISLA_Popup"] = 2  # MSLA Speed has Changed
 
   return packer.make_can_msg("FR_CMR_02_100ms", CAN.ECAN, values)
 

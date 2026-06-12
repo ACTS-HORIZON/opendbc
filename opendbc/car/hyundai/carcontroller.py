@@ -229,7 +229,8 @@ class CarController(CarControllerBase, EsccCarController, LeadDataCarController,
     # showing openpilot's speed limit when it has one (stock camera sign recognition otherwise)
     if self.frame % 10 == 0 and CS.fr_cmr_02 is not None:
       speed_limit_clu = hud_control.speedLimit * (CV.MS_TO_KPH if CS.is_metric else CV.MS_TO_MPH)
-      can_sends.append(hyundaicanfd.create_fr_cmr_02(self.packer, self.CAN, CS.fr_cmr_02, speed_limit_clu))
+      can_sends.append(hyundaicanfd.create_fr_cmr_02(self.packer, self.CAN, CS.fr_cmr_02, speed_limit_clu,
+                                                     hud_control.speedLimitPrompt))
 
     # blinkers
     if lka_steering and self.CP.flags & HyundaiFlags.CANFD_ENABLE_BLINKERS:
