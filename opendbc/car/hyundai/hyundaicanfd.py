@@ -88,10 +88,19 @@ def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu):
   # camera's counter on our own 10Hz clock duplicates/skips values, which the cluster rejects as stale
   values = {s: v for s, v in stock_values.items() if s not in ("CHECKSUM", "COUNTER")}
 
-  speed_limit_clu = int(round(speed_limit_clu))
-  if speed_limit_clu > 0:
-    values["ISLW_SpdCluMainDis"] = min(speed_limit_clu, 0xFC)  # valid range 0x01-0xFC, unit follows cluster
-    values["ISLW_SpdNaviMainDis"] = min(speed_limit_clu, 0xFC)
+  # TEMPORARY DIAGNOSTIC: when the camera recognizes a sign, retransmit it +5 over the real value.
+  # If the dash shows the bumped value, the cluster renders this stream and the override approach is
+  # viable; if it shows the true value, the sign display is fed by a path the harness can't intercept
+  # (the camera's uncut A-CAN connection / nav fusion via the head unit)
+  stock_spd = int(stock_values.get("ISLW_SpdCluMainDis", 0))
+  if 0 < stock_spd < 0xFD:
+    values["ISLW_SpdCluMainDis"] = stock_spd + 5
+    values["ISLW_SpdNaviMainDis"] = stock_spd + 5
+  else:
+    speed_limit_clu = int(round(speed_limit_clu))
+    if speed_limit_clu > 0:
+      values["ISLW_SpdCluMainDis"] = min(speed_limit_clu, 0xFC)  # valid range 0x01-0xFC, unit follows cluster
+      values["ISLW_SpdNaviMainDis"] = min(speed_limit_clu, 0xFC)
 
   return packer.make_can_msg("FR_CMR_02_100ms", CAN.ECAN, values)
 
