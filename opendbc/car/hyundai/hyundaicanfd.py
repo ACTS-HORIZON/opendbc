@@ -90,8 +90,6 @@ def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu):
   if speed_limit_clu > 0:
     values["ISLW_SpdCluMainDis"] = min(speed_limit_clu, 0xFC)  # valid range 0x01-0xFC, unit follows cluster
     values["ISLW_SpdNaviMainDis"] = min(speed_limit_clu, 0xFC)
-    if values["ISLW_SysSta"] == 0:
-      values["ISLW_SysSta"] = 1  # presumed "valid": cluster ignores the sign value while SysSta reads invalid
 
   return packer.make_can_msg("FR_CMR_02_100ms", CAN.ECAN, values)
 
