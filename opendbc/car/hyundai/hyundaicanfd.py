@@ -83,8 +83,10 @@ def create_suppress_lfa(packer, CAN, lfa_block_msg, lka_steering_alt):
 
 def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu):
   # retransmit the camera's ISLW/ISLA message (its copy is blocked from forwarding by safety),
-  # overriding the cluster speed limit sign with openpilot's when it has one to show
-  values = {s: v for s, v in stock_values.items() if s != "CHECKSUM"}
+  # overriding the cluster speed limit sign with openpilot's when it has one to show.
+  # CHECKSUM/COUNTER are dropped so the packer generates a clean monotonic stream: resampling the
+  # camera's counter on our own 10Hz clock duplicates/skips values, which the cluster rejects as stale
+  values = {s: v for s, v in stock_values.items() if s not in ("CHECKSUM", "COUNTER")}
 
   speed_limit_clu = int(round(speed_limit_clu))
   if speed_limit_clu > 0:
