@@ -95,12 +95,16 @@ def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu, speed_limit_pro
     values["ISLW_SpdCluMainDis"] = min(speed_limit_clu, 0xFC)  # valid range 0x01-0xFC, unit follows cluster
     values["ISLW_SpdNaviMainDis"] = min(speed_limit_clu, 0xFC)
 
-  # set speed change prompt, the stock MSLA popup with a flashing sign while the change is pending
+  # set speed change prompt, the stock MSLA popup with a flashing sign while the change is pending.
+  # the cluster only renders MSLA popups in Assist mode, so advertise it while a prompt is up;
+  # the camera still believes the in-car Warning/Off setting, keeping stock ISLA logic quiet
   if speed_limit_prompt == SpeedLimitPrompt.willChange:
     values["ISLA_Popup"] = 1  # MSLA Speed will Change
     values["ISLA_SymFlashMod"] = 1  # Flashing Sign
+    values["ISLA_OptUsmSta"] = 3  # Assist
   elif speed_limit_prompt == SpeedLimitPrompt.hasChanged:
     values["ISLA_Popup"] = 2  # MSLA Speed has Changed
+    values["ISLA_OptUsmSta"] = 3  # Assist
 
   return packer.make_can_msg("FR_CMR_02_100ms", CAN.ECAN, values)
 
