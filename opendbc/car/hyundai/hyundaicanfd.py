@@ -83,7 +83,7 @@ def create_suppress_lfa(packer, CAN, lfa_block_msg, lka_steering_alt):
   return packer.make_can_msg(suppress_msg, CAN.ACAN, values)
 
 
-def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu, speed_limit_prompt):
+def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu, speed_limit_prompt, prompt_increase):
   # retransmit the camera's ISLW/ISLA message (its copy is blocked from forwarding by safety),
   # overriding the cluster speed limit sign with openpilot's when it has one to show.
   # CHECKSUM/COUNTER are dropped so the packer generates a clean monotonic stream: resampling the
@@ -95,15 +95,15 @@ def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu, speed_limit_pro
     values["ISLW_SpdCluMainDis"] = min(speed_limit_clu, 0xFC)  # valid range 0x01-0xFC, unit follows cluster
     values["ISLW_SpdNaviMainDis"] = min(speed_limit_clu, 0xFC)
 
-  # set speed change prompt, the stock MSLA popup with a flashing sign while the change is pending.
-  # the cluster only renders MSLA popups in Assist mode, so advertise it while a prompt is up;
-  # the camera still believes the in-car Warning/Off setting, keeping stock ISLA logic quiet
+  # set speed change prompt, matching stock ISLA as captured on a GV60: a flashing +/- arrow on the
+  # sign while the change is pending, then a "CC_SCC Speed has Changed" popup held for 4s once adopted.
+  # the cluster only renders these in Assist mode, so advertise it while a prompt is up; the camera
+  # still believes the in-car Warning/Off setting, keeping stock ISLA logic quiet
   if speed_limit_prompt == SpeedLimitPrompt.willChange:
-    values["ISLA_Popup"] = 1  # MSLA Speed will Change
-    values["ISLA_SymFlashMod"] = 1  # Flashing Sign
+    values["ISLA_SymFlashMod"] = 3 if prompt_increase else 2  # Flashing +/- Arrow Symbol
     values["ISLA_OptUsmSta"] = 3  # Assist
   elif speed_limit_prompt == SpeedLimitPrompt.hasChanged:
-    values["ISLA_Popup"] = 2  # MSLA Speed has Changed
+    values["ISLA_Popup"] = 4  # CC_SCC Speed has Changed
     values["ISLA_OptUsmSta"] = 3  # Assist
 
   return packer.make_can_msg("FR_CMR_02_100ms", CAN.ECAN, values)
