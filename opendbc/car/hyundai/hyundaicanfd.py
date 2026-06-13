@@ -83,7 +83,7 @@ def create_suppress_lfa(packer, CAN, lfa_block_msg, lka_steering_alt):
   return packer.make_can_msg(suppress_msg, CAN.ACAN, values)
 
 
-def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu, speed_limit_prompt, prompt_increase):
+def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu, speed_limit_prompt, prompt_increase, speed_limit_active):
   # retransmit the camera's ISLW/ISLA message (its copy is blocked from forwarding by safety),
   # overriding the cluster speed limit sign with openpilot's when it has one to show.
   # CHECKSUM/COUNTER are dropped so the packer generates a clean monotonic stream: resampling the
@@ -95,18 +95,20 @@ def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu, speed_limit_pro
     values["ISLW_SpdCluMainDis"] = min(speed_limit_clu, 0xFC)  # valid range 0x01-0xFC, unit follows cluster
     values["ISLW_SpdNaviMainDis"] = min(speed_limit_clu, 0xFC)
 
+  # the cluster shows the set speed in green and renders ISLA prompts only when Assist mode is
+  # advertised, so do it while openpilot is managing the set speed or showing a prompt; the camera
+  # still believes the in-car Warning/Off setting, keeping its own ISLA logic quiet
+  if speed_limit_active or speed_limit_prompt != SpeedLimitPrompt.none:
+    values["ISLA_OptUsmSta"] = 3  # Assist
+
   # set speed change prompt, matching stock ISLA as captured on a GV60: a flashing +/- arrow on the
   # sign while the change is pending, then a "CC_SCC Speed has Changed" popup held for 4s once adopted.
-  # the cluster only renders these in Assist mode, so advertise it while a prompt is up; the camera
-  # still believes the in-car Warning/Off setting, keeping stock ISLA logic quiet. the flashing arrow
-  # also requires ISLA_SwIgnoreReq set alongside the flash mode (stock sets both together)
+  # the flashing arrow also requires ISLA_SwIgnoreReq set alongside the flash mode (stock sets both)
   if speed_limit_prompt == SpeedLimitPrompt.willChange:
     values["ISLA_SymFlashMod"] = 3 if prompt_increase else 2  # Flashing +/- Arrow Symbol
     values["ISLA_SwIgnoreReq"] = 2 if prompt_increase else 1  # +/-(SET) Switch Input Ignore
-    values["ISLA_OptUsmSta"] = 3  # Assist
   elif speed_limit_prompt == SpeedLimitPrompt.hasChanged:
     values["ISLA_Popup"] = 4  # CC_SCC Speed has Changed
-    values["ISLA_OptUsmSta"] = 3  # Assist
 
   return packer.make_can_msg("FR_CMR_02_100ms", CAN.ECAN, values)
 

@@ -231,7 +231,8 @@ class CarController(CarControllerBase, EsccCarController, LeadDataCarController,
       speed_limit_clu = hud_control.speedLimit * (CV.MS_TO_KPH if CS.is_metric else CV.MS_TO_MPH)
       prompt_increase = hud_control.speedLimit > hud_control.setSpeed
       can_sends.append(hyundaicanfd.create_fr_cmr_02(self.packer, self.CAN, CS.fr_cmr_02, speed_limit_clu,
-                                                     hud_control.speedLimitPrompt, prompt_increase))
+                                                     hud_control.speedLimitPrompt, prompt_increase,
+                                                     hud_control.speedLimitActive))
 
     # blinkers
     if lka_steering and self.CP.flags & HyundaiFlags.CANFD_ENABLE_BLINKERS:

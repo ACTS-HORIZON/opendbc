@@ -403,6 +403,7 @@ struct CarControl {
     leadDistanceBars @10: Int8;  # 1-3: 1 is closest, 3 is farthest. some ports may utilize 2-4 bars instead
     speedLimit @11: Float32;  # m/s, 0 = no limit to display on the dash
     speedLimitPrompt @12: SpeedLimitPrompt;  # cluster prompt for a set speed change to a new speed limit
+    speedLimitActive @13: Bool;  # openpilot is actively managing the set speed to the limit (dash shows it in green)
 
     enum SpeedLimitPrompt {
       none @0;
