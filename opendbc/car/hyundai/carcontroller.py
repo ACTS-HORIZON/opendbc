@@ -225,6 +225,15 @@ class CarController(CarControllerBase, EsccCarController, LeadDataCarController,
     if self.frame % 5 == 0 and (not lka_steering or lka_steering_long):
       can_sends.append(hyundaicanfd.create_lfahda_cluster(self.packer, self.CAN, CC.enabled, self.lfa_icon))
 
+    # cluster speed limit sign: retransmit the camera's ISLW message at its stock 10Hz rate,
+    # showing openpilot's speed limit when it has one (stock camera sign recognition otherwise)
+    if self.frame % 10 == 0 and CS.fr_cmr_02 is not None:
+      speed_limit_clu = hud_control.speedLimit * (CV.MS_TO_KPH if CS.is_metric else CV.MS_TO_MPH)
+      prompt_increase = hud_control.speedLimit > hud_control.setSpeed
+      can_sends.append(hyundaicanfd.create_fr_cmr_02(self.packer, self.CAN, CS.fr_cmr_02, speed_limit_clu,
+                                                     hud_control.speedLimitPrompt, prompt_increase,
+                                                     hud_control.speedLimitActive))
+
     # blinkers
     if lka_steering and self.CP.flags & HyundaiFlags.CANFD_ENABLE_BLINKERS:
       can_sends.extend(hyundaicanfd.create_spas_messages(self.packer, self.CAN, CC.leftBlinker, CC.rightBlinker))

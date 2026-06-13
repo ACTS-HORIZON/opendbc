@@ -401,6 +401,15 @@ struct CarControl {
     rightLaneDepart @8: Bool;
     leftLaneDepart @9: Bool;
     leadDistanceBars @10: Int8;  # 1-3: 1 is closest, 3 is farthest. some ports may utilize 2-4 bars instead
+    speedLimit @11: Float32;  # m/s, 0 = no limit to display on the dash
+    speedLimitPrompt @12: SpeedLimitPrompt;  # cluster prompt for a set speed change to a new speed limit
+    speedLimitActive @13: Bool;  # openpilot is actively managing the set speed to the limit (dash shows it in green)
+
+    enum SpeedLimitPrompt {
+      none @0;
+      willChange @1;  # new speed limit detected, set speed about to change (or awaiting driver confirmation)
+      hasChanged @2;  # set speed changed to the new speed limit
+    }
 
     # not used with the dash, TODO: separate structs for dash UI and device UI
     audibleAlert @5: AudibleAlert;
