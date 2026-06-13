@@ -98,9 +98,11 @@ def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu, speed_limit_pro
   # set speed change prompt, matching stock ISLA as captured on a GV60: a flashing +/- arrow on the
   # sign while the change is pending, then a "CC_SCC Speed has Changed" popup held for 4s once adopted.
   # the cluster only renders these in Assist mode, so advertise it while a prompt is up; the camera
-  # still believes the in-car Warning/Off setting, keeping stock ISLA logic quiet
+  # still believes the in-car Warning/Off setting, keeping stock ISLA logic quiet. the flashing arrow
+  # also requires ISLA_SwIgnoreReq set alongside the flash mode (stock sets both together)
   if speed_limit_prompt == SpeedLimitPrompt.willChange:
     values["ISLA_SymFlashMod"] = 3 if prompt_increase else 2  # Flashing +/- Arrow Symbol
+    values["ISLA_SwIgnoreReq"] = 2 if prompt_increase else 1  # +/-(SET) Switch Input Ignore
     values["ISLA_OptUsmSta"] = 3  # Assist
   elif speed_limit_prompt == SpeedLimitPrompt.hasChanged:
     values["ISLA_Popup"] = 4  # CC_SCC Speed has Changed
