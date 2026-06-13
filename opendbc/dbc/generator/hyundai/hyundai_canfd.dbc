@@ -550,8 +550,8 @@ BO_ 490 ADRV_0x1ea: 32 ADRV
  SG_ SET_ME_TMP_F_2 : 240|5@1+ (1,0) [0|31] "" XXX
 
 BO_ 506 FR_CMR_02_100ms: 32 FR_CMR
- SG_ FR_CMR_Crc2Val : 0|16@1+ (1,0) [0|65535] "" CGW
- SG_ FR_CMR_AlvCnt2Val : 16|8@1+ (1,0) [0|255] "" CGW
+ SG_ CHECKSUM : 0|16@1+ (1,0) [0|65535] "" CGW
+ SG_ COUNTER : 16|8@1+ (1,0) [0|255] "" CGW
  SG_ ISLW_OptUsmSta : 24|2@1+ (1,0) [0|3] "" CLU,CGW
  SG_ ISLW_SysSta : 26|2@1+ (1,0) [0|3] "" CLU,CGW
  SG_ ISLW_NoPassingInfoDis : 28|3@1+ (1,0) [0|7] "" CLU,CGW
@@ -876,8 +876,8 @@ CM_ SG_ 442 BCW_RtIndSta "Right blind-spot indicator. When a vehicle is detected
 CM_ SG_ 416 SCC_ObjSta "state of in-path object and information of controllable state.";
 CM_ SG_ 480 NEW_SIGNAL_5 "todo: figure out why always set to 1";
 CM_ BO_ 506 "Sent by the camera containing speed limit information. ISLW stands for Intelligent Speed Limit Warning, and ISLA is Intelligent Speed Limit Assist. it also contains road sign information.";
-CM_ SG_ 506 FR_CMR_Crc2Val "The data area for CRC calculation is based on the data length (DLC) of the message DB.The CRC shall be calculated over the entire data block (excluding the CRC bytes) including the user data, alive counter and Data ID - CRC Polynomial (0x1021) , In";
-CM_ SG_ 506 FR_CMR_AlvCnt2Val "For the first transmission request for a data element the counter shall be initialized with 0 and shall be incremented by 1 for every subsequent send request. When the counter reaches the maximum value(0xFF), then it shall restart with 0 for the next s";
+CM_ SG_ 506 CHECKSUM "The data area for CRC calculation is based on the data length (DLC) of the message DB.The CRC shall be calculated over the entire data block (excluding the CRC bytes) including the user data, alive counter and Data ID - CRC Polynomial (0x1021) , In";
+CM_ SG_ 506 COUNTER "For the first transmission request for a data element the counter shall be initialized with 0 and shall be incremented by 1 for every subsequent send request. When the counter reaches the maximum value(0xFF), then it shall restart with 0 for the next s";
 CM_ SG_ 506 ISLW_OptUsmSta "ISLW option information";
 CM_ SG_ 506 ISLW_SysSta "Validity of ISLW information";
 CM_ SG_ 506 ISLW_NoPassingInfoDis "This signal indicates additional information of ISLW. For example no passing.";

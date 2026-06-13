@@ -1,8 +1,10 @@
 import numpy as np
-from opendbc.car import CanBusBase
+from opendbc.car import CanBusBase, structs
 from opendbc.car.crc import CRC16_XMODEM
 from opendbc.car.hyundai.values import HyundaiFlags
 from opendbc.sunnypilot.car.hyundai.lead_data_ext import CanFdLeadData
+
+SpeedLimitPrompt = structs.CarControl.HUDControl.SpeedLimitPrompt
 
 
 class CanBus(CanBusBase):
@@ -79,6 +81,34 @@ def create_suppress_lfa(packer, CAN, lfa_block_msg, lka_steering_alt):
   values["LEFT_LANE_LINE"] = 0
   values["RIGHT_LANE_LINE"] = 0
   return packer.make_can_msg(suppress_msg, CAN.ACAN, values)
+
+
+def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu, speed_limit_prompt, prompt_increase):
+  # retransmit the camera's ISLW/ISLA message (its copy is blocked from forwarding by safety),
+  # overriding the cluster speed limit sign with openpilot's when it has one to show.
+  # CHECKSUM/COUNTER are dropped so the packer generates a clean monotonic stream: resampling the
+  # camera's counter on our own 10Hz clock duplicates/skips values, which the cluster rejects as stale
+  values = {s: v for s, v in stock_values.items() if s not in ("CHECKSUM", "COUNTER")}
+
+  speed_limit_clu = int(round(speed_limit_clu))
+  if speed_limit_clu > 0:
+    values["ISLW_SpdCluMainDis"] = min(speed_limit_clu, 0xFC)  # valid range 0x01-0xFC, unit follows cluster
+    values["ISLW_SpdNaviMainDis"] = min(speed_limit_clu, 0xFC)
+
+  # set speed change prompt, matching stock ISLA as captured on a GV60: a flashing +/- arrow on the
+  # sign while the change is pending, then a "CC_SCC Speed has Changed" popup held for 4s once adopted.
+  # the cluster only renders these in Assist mode, so advertise it while a prompt is up; the camera
+  # still believes the in-car Warning/Off setting, keeping stock ISLA logic quiet. the flashing arrow
+  # also requires ISLA_SwIgnoreReq set alongside the flash mode (stock sets both together)
+  if speed_limit_prompt == SpeedLimitPrompt.willChange:
+    values["ISLA_SymFlashMod"] = 3 if prompt_increase else 2  # Flashing +/- Arrow Symbol
+    values["ISLA_SwIgnoreReq"] = 2 if prompt_increase else 1  # +/-(SET) Switch Input Ignore
+    values["ISLA_OptUsmSta"] = 3  # Assist
+  elif speed_limit_prompt == SpeedLimitPrompt.hasChanged:
+    values["ISLA_Popup"] = 4  # CC_SCC Speed has Changed
+    values["ISLA_OptUsmSta"] = 3  # Assist
+
+  return packer.make_can_msg("FR_CMR_02_100ms", CAN.ECAN, values)
 
 
 def create_buttons(packer, CP, CAN, cnt, btn):
