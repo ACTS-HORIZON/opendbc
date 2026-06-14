@@ -65,7 +65,6 @@ class CarState(CarStateBase, EsccCarStateBase, MadsCarState, CarStateExt):
 
     self.cruise_info = {}
     self.fr_cmr_02 = None
-    self.speed_limit_display = None
 
     # On some cars, CLU15->CF_Clu_VehicleSpeed can oscillate faster than the dash updates. Sample at 5 Hz
     self.cluster_speed = 0
@@ -306,9 +305,6 @@ class CarState(CarStateBase, EsccCarStateBase, MadsCarState, CarStateExt):
     # blocked from forwarding by safety). Only LFA-steering cars have the camera behind the panda for this message.
     if self.CP_SP.flags & HyundaiFlagsSP.SPEED_LIMIT_AVAILABLE and not self.CP.flags & HyundaiFlags.CANFD_LKA_STEER_MSG:
       self.fr_cmr_02 = copy.copy(cp_cam.vl["FR_CMR_02_100ms"])
-      # stock camera speed limit display message, retransmitted on ECAN with the set speed turned green
-      # (DISPLAY_MODE) when openpilot auto-follows the limit; camera copy is blocked from forwarding by safety
-      self.speed_limit_display = copy.copy(cp_cam.vl["SPEED_LIMIT_DISPLAY"])
 
     MadsCarState.update_mads_canfd(self, ret, can_parsers)
 

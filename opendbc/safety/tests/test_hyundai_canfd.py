@@ -95,9 +95,9 @@ class TestHyundaiCanfdBase(HyundaiButtonBase, common.CarSafetyTest, common.Drive
 
 class TestHyundaiCanfdLFASteeringBase(TestHyundaiCanfdBase):
 
-  TX_MSGS = [[0x12A, 0], [0x1A0, 1], [0x1CF, 0], [0x1E0, 0], [0x1FA, 0], [0x4A3, 0]]
-  RELAY_MALFUNCTION_ADDRS = {0: (0x12A, 0x1E0, 0x1FA, 0x4A3)}  # LFA, LFAHDA_CLUSTER, FR_CMR_02_100ms, SPEED_LIMIT_DISPLAY
-  FWD_BLACKLISTED_ADDRS = {2: [0x12A, 0x1E0, 0x1FA, 0x4A3]}
+  TX_MSGS = [[0x12A, 0], [0x1A0, 1], [0x1CF, 0], [0x1E0, 0], [0x1FA, 0]]
+  RELAY_MALFUNCTION_ADDRS = {0: (0x12A, 0x1E0, 0x1FA)}  # LFA, LFAHDA_CLUSTER, FR_CMR_02_100ms
+  FWD_BLACKLISTED_ADDRS = {2: [0x12A, 0x1E0, 0x1FA]}
 
   STEER_MSG = "LFA"
   BUTTONS_TX_BUS = 2
@@ -212,7 +212,7 @@ class TestHyundaiCanfdLKASteeringAltEV(TestHyundaiCanfdBase):
 class TestHyundaiCanfdLKASteeringLongEV(HyundaiLongitudinalBase, TestHyundaiCanfdLKASteeringEV):
 
   TX_MSGS = [[0x50, 0], [0x1CF, 1], [0x2A4, 0], [0x51, 0], [0x730, 1], [0x12a, 1], [0x160, 1],
-             [0x1e0, 1], [0x1fa, 1], [0x4a3, 1], [0x1a0, 1], [0x1ea, 1], [0x200, 1], [0x345, 1], [0x1da, 1]]
+             [0x1e0, 1], [0x1fa, 1], [0x1a0, 1], [0x1ea, 1], [0x200, 1], [0x345, 1], [0x1da, 1]]
 
   RELAY_MALFUNCTION_ADDRS = {0: (0x50, 0x2a4), 1: (0x1a0,)}  # LKAS, CAM_0x2A4, SCC_CONTROL
 
@@ -245,9 +245,9 @@ class TestHyundaiCanfdLKASteeringLongEV(HyundaiLongitudinalBase, TestHyundaiCanf
 # Tests longitudinal for ICE, hybrid, EV cars with LFA steering
 class TestHyundaiCanfdLFASteeringLongBase(HyundaiLongitudinalBase, TestHyundaiCanfdLFASteeringBase):
 
-  FWD_BLACKLISTED_ADDRS = {2: [0x12a, 0x1e0, 0x1fa, 0x4a3, 0x1a0, 0x160]}
+  FWD_BLACKLISTED_ADDRS = {2: [0x12a, 0x1e0, 0x1fa, 0x1a0, 0x160]}
 
-  RELAY_MALFUNCTION_ADDRS = {0: (0x12A, 0x1E0, 0x1FA, 0x4A3, 0x1a0, 0x160)}  # LFA, LFAHDA_CLUSTER, FR_CMR_02_100ms, SPEED_LIMIT_DISPLAY, SCC_CONTROL, ADRV_0x160
+  RELAY_MALFUNCTION_ADDRS = {0: (0x12A, 0x1E0, 0x1FA, 0x1a0, 0x160)}  # LFA, LFAHDA_CLUSTER, FR_CMR_02_100ms, SCC_CONTROL, ADRV_0x160
 
   DISABLED_ECU_UDS_MSG = (0x7D0, 0)
   DISABLED_ECU_ACTUATION_MSG = (0x1a0, 0)
