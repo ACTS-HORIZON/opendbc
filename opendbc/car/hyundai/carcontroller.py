@@ -233,12 +233,6 @@ class CarController(CarControllerBase, EsccCarController, LeadDataCarController,
       can_sends.append(hyundaicanfd.create_fr_cmr_02(self.packer, self.CAN, CS.fr_cmr_02, speed_limit_clu,
                                                      hud_control.speedLimitPrompt, prompt_increase,
                                                      hud_control.speedLimitActive))
-      # set speed turns green only when auto-following a limit at/above the SLA confirm threshold (40mph/80kph)
-      if CS.speed_limit_display is not None:
-        confirm_threshold = 80 if CS.is_metric else 40
-        speed_limit_green = hud_control.speedLimitActive and speed_limit_clu >= confirm_threshold
-        can_sends.append(hyundaicanfd.create_speed_limit_display(self.packer, self.CAN, CS.speed_limit_display,
-                                                                 speed_limit_clu, speed_limit_green))
 
     # blinkers
     if lka_steering and self.CP.flags & HyundaiFlags.CANFD_ENABLE_BLINKERS:
