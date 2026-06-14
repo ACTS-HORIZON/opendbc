@@ -113,6 +113,18 @@ def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu, speed_limit_pro
   return packer.make_can_msg("FR_CMR_02_100ms", CAN.ECAN, values)
 
 
+def create_speed_limit_display(packer, CAN, stock_values, speed_limit_clu, speed_limit_green):
+  # retransmit the camera's speed limit display message (its copy is blocked from forwarding by safety),
+  # forcing DISPLAY_MODE to "auto follow" so the cluster shows the set speed in green while openpilot
+  # auto-follows the limit. otherwise pass the camera's frame through untouched
+  values = {s: v for s, v in stock_values.items()}
+  if speed_limit_green:
+    values["DISPLAY_MODE"] = 1  # auto follow -> set speed shown green
+    if speed_limit_clu > 0:
+      values["SPEED_LIMIT"] = min(int(round(speed_limit_clu)), 0xFC)
+  return packer.make_can_msg("SPEED_LIMIT_DISPLAY", CAN.ECAN, values)
+
+
 def create_buttons(packer, CP, CAN, cnt, btn):
   values = {
     "COUNTER": cnt,
