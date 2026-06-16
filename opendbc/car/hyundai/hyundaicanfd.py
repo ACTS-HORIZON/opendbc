@@ -112,9 +112,11 @@ def create_fr_cmr_02(packer, CAN, stock_values, speed_limit_clu, speed_limit_pro
   # set speed change prompt, matching stock ISLA as captured on a GV60: a flashing +/- arrow on the
   # sign while the change is pending, then a "CC_SCC Speed has Changed" popup held for 4s once adopted.
   # the flashing arrow also requires ISLA_SwIgnoreReq set alongside the flash mode (stock sets both)
-  if speed_limit_prompt == SpeedLimitPrompt.willChange:
+  if speed_limit_prompt in (SpeedLimitPrompt.willChange, SpeedLimitPrompt.willAutoChange):
     values["ISLA_SymFlashMod"] = 3 if prompt_increase else 2  # Flashing +/- Arrow Symbol
     values["ISLA_SwIgnoreReq"] = 2 if prompt_increase else 1  # +/-(SET) Switch Input Ignore
+    if speed_limit_prompt == SpeedLimitPrompt.willAutoChange:
+      values["ISLA_Popup"] = 3  # CC_SCC Speed will Change -> "auto-adjusting to speed limit" (auto, no confirm)
   elif speed_limit_prompt == SpeedLimitPrompt.hasChanged:
     values["ISLA_Popup"] = 4  # CC_SCC Speed has Changed
 

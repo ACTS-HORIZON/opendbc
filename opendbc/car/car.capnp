@@ -409,6 +409,7 @@ struct CarControl {
       none @0;
       willChange @1;  # new speed limit detected, set speed about to change (or awaiting driver confirmation)
       hasChanged @2;  # set speed changed to the new speed limit
+      willAutoChange @3;  # above-threshold limit change that auto-applies without confirmation ("auto-adjusting")
     }
 
     # not used with the dash, TODO: separate structs for dash UI and device UI
