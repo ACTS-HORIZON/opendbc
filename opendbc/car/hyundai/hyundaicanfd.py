@@ -37,9 +37,17 @@ class CanBus(CanBusBase):
   def CAM(self):
     return self._cam
 
+# Speed-based steering damping gain. Lower = sharper/more direct, higher = smoother.
+# Stock GV60 holds 100 below ~35 mph, ramps to ~160 at 65 mph.
+# Extended: sharpened below 20 mph for turns, ramped to 85 mph for highway stability.
+_DAMP_FACTOR_BP = [0.,  4.5,  9.,   15.,  22.,  30.,  38.]  # m/s
+#                  0    10    20    34    49    67    85   mph
+_DAMP_FACTOR_V  = [40,  45,   60,   100,  125,  150,  170]   # Damping_Gain [0-255]
+
+
 def create_steering_messages(packer, CP, CAN, enabled, lat_active, apply_torque, lkas_icon,
                              left_lane_visible=False, right_lane_visible=False,
-                             left_lane_depart=False, right_lane_depart=False):
+                             left_lane_depart=False, right_lane_depart=False, v_ego=0.):
   # LKA_RcgSta: 0=none, 1=left, 2=right, 3=both (camera's normal driving value is 3)
   lane_rcg = (3 if (left_lane_visible and right_lane_visible)
               else 1 if left_lane_visible
@@ -55,7 +63,7 @@ def create_steering_messages(packer, CP, CAN, enabled, lat_active, apply_torque,
     "LKA_RcgSta": lane_rcg,
     "LKA_LHLnWrnSta": 1 if left_lane_depart else 0,   # 1 = lane-departure warning (left)
     "LKA_RHLnWrnSta": 1 if right_lane_depart else 0,  # 1 = lane-departure warning (right)
-    "Damping_Gain": 100,  # can potentially tuned for better perf [3, 200]
+    "Damping_Gain": int(np.interp(v_ego, _DAMP_FACTOR_BP, _DAMP_FACTOR_V)),
   }
 
   ret = []
