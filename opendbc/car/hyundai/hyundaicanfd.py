@@ -42,7 +42,7 @@ class CanBus(CanBusBase):
 # Extended: sharpened below 20 mph for turns, ramped to 85 mph for highway stability.
 _DAMP_FACTOR_BP = [0.,  4.5,  9.,   15.,  22.,  30.,  38.]  # m/s
 #                  0    10    20    34    49    67    85   mph
-_DAMP_FACTOR_V  = [40,  45,   60,   100,  125,  150,  170]   # Damping_Gain [0-255]
+_DAMP_FACTOR_V  = [5,  20,   50,   100,  140,  175,  200]   # Damping_Gain [3-200]
 
 
 def create_steering_messages(packer, CP, CAN, enabled, lat_active, apply_torque, lkas_icon,
