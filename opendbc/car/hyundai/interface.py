@@ -12,6 +12,9 @@ from opendbc.sunnypilot.car.hyundai.escc import ESCC_MSG
 from opendbc.sunnypilot.car.hyundai.longitudinal.helpers import get_longitudinal_tune
 from opendbc.sunnypilot.car.hyundai.values import HyundaiFlagsSP, HyundaiSafetyFlagsSP
 
+import numpy as np
+from opendbc.sunnypilot.car.interfaces import LatControlInputs
+
 ButtonType = structs.CarState.ButtonEvent.Type
 Ecu = structs.CarParams.Ecu
 
@@ -25,6 +28,23 @@ class CarInterface(CarInterfaceBase):
   RadarInterface = RadarInterface
 
   DRIVABLE_GEARS = (structs.CarState.GearShifter.sport, structs.CarState.GearShifter.manumatic)
+
+  # GV60: measured open-loop, joystick route 0000003c, 2026-08
+  GV60_LAF_BP = [5.0, 9.0, 13.0, 17.0, 30.0]   # m/s
+  GV60_LAF_V  = [2.70, 3.40, 3.50, 3.60, 3.80]
+
+  @staticmethod
+  def torque_from_lateral_accel_gv60(latcontrol_inputs, torque_params, gravity_adjusted):
+    laf = float(np.interp(latcontrol_inputs.vego, CarInterface.GV60_LAF_BP, CarInterface.GV60_LAF_V))
+    lat_accel = latcontrol_inputs.lateral_acceleration
+    if gravity_adjusted:
+      lat_accel -= torque_params.latAccelOffset
+    return lat_accel / laf
+
+  def torque_from_lateral_accel_in_torque_space(self):
+    if self.CP.carFingerprint == CAR.GENESIS_GV60_EV_1ST_GEN:
+      return self.torque_from_lateral_accel_gv60
+    return self.torque_from_lateral_accel_linear_in_torque_space
 
   @staticmethod
   def _get_params(ret: structs.CarParams, candidate, fingerprint, car_fw, alpha_long, is_release, docs) -> structs.CarParams:
