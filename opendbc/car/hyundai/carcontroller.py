@@ -9,6 +9,7 @@ from opendbc.car.hyundai.values import HyundaiFlags, Buttons, CarControllerParam
 from opendbc.car.interfaces import CarControllerBase
 
 from opendbc.sunnypilot.car.hyundai.escc import EsccCarController
+from opendbc.sunnypilot.car.hyundai.horizon_dev import HorizonDev
 from opendbc.sunnypilot.car.hyundai.icbm import IntelligentCruiseButtonManagementInterface
 from opendbc.sunnypilot.car.hyundai.longitudinal.controller import LongitudinalController
 from opendbc.sunnypilot.car.hyundai.lead_data_ext import LeadDataCarController
@@ -67,6 +68,7 @@ class CarController(CarControllerBase, EsccCarController, LeadDataCarController,
     self.params = CarControllerParams(CP)
     self.packer = CANPacker(dbc_names[Bus.pt])
     self.angle_limit_counter = 0
+    self.horizon = HorizonDev()  # on-device advanced knobs (fails closed to stock)
 
     self.accel_last = 0
     self.apply_torque_last = 0
@@ -86,9 +88,17 @@ class CarController(CarControllerBase, EsccCarController, LeadDataCarController,
     actuators = CC.actuators
     hud_control = CC.hudControl
 
+    # Horizon Dev: refresh advanced knobs (throttled inside; no-op when disabled/unavailable).
+    self.horizon.update()
+
     # steering torque
-    new_torque = int(round(actuators.torque * self.params.STEER_MAX))
-    apply_torque = apply_driver_steer_torque_limits(new_torque, self.apply_torque_last, CS.out.steeringTorque, self.params)
+    # steer_max is the stock STEER_MAX unless the Horizon Dev "max steer" knob overrides it.
+    # It is applied to the scale, the driver-torque limit, and the output normalization together
+    # so the whole path stays consistent.
+    steer_max = self.horizon.steer_max_or(self.params.STEER_MAX)
+    new_torque = int(round(actuators.torque * steer_max))
+    apply_torque = apply_driver_steer_torque_limits(new_torque, self.apply_torque_last, CS.out.steeringTorque,
+                                                    self.params, steer_max=steer_max)
 
     # >90 degree steering fault prevention
     self.angle_limit_counter, apply_steer_req = common_fault_avoidance(abs(CS.out.steeringAngleDeg) >= MAX_ANGLE, CC.latActive,
@@ -142,7 +152,7 @@ class CarController(CarControllerBase, EsccCarController, LeadDataCarController,
     can_sends.extend(IntelligentCruiseButtonManagementInterface.update(self, CS, CC_SP, self.packer, self.frame, self.last_button_frame, self.CAN))
 
     new_actuators = actuators.as_builder()
-    new_actuators.torque = apply_torque / self.params.STEER_MAX
+    new_actuators.torque = apply_torque / steer_max
     new_actuators.torqueOutputCan = apply_torque
     new_actuators.accel = self.tuning.actual_accel
 
@@ -214,7 +224,8 @@ class CarController(CarControllerBase, EsccCarController, LeadDataCarController,
     can_sends.extend(hyundaicanfd.create_steering_messages(
       self.packer, self.CP, self.CAN, CC.enabled, apply_steer_req, apply_torque, self.lkas_icon,
       hud_control.leftLaneVisible, hud_control.rightLaneVisible,
-      self.left_depart_latch > 0, self.right_depart_latch > 0, v_ego=CS.out.vEgo))
+      self.left_depart_latch > 0, self.right_depart_latch > 0, v_ego=CS.out.vEgo,
+      damp_override=self.horizon.damp_gain))
 
     # prevent LFA from activating on LKA steering cars by sending "no lane lines detected" to ADAS ECU
     if self.frame % 5 == 0 and lka_steering:

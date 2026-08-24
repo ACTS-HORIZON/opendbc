@@ -47,7 +47,10 @@ _DAMP_FACTOR_V  = [5,  20,   50,   100,  140,  175,  200]   # Damping_Gain [3-20
 
 def create_steering_messages(packer, CP, CAN, enabled, lat_active, apply_torque, lkas_icon,
                              left_lane_visible=False, right_lane_visible=False,
-                             left_lane_depart=False, right_lane_depart=False, v_ego=0.):
+                             left_lane_depart=False, right_lane_depart=False, v_ego=0.,
+                             damp_override=None):
+  # Horizon Dev: fixed steer-damp override (LFA Damping_Gain), else the stock speed-interp table.
+  damp_gain = int(damp_override) if damp_override is not None else int(np.interp(v_ego, _DAMP_FACTOR_BP, _DAMP_FACTOR_V))
   # LKA_RcgSta: 0=none, 1=left, 2=right, 3=both (camera's normal driving value is 3)
   lane_rcg = (3 if (left_lane_visible and right_lane_visible)
               else 1 if left_lane_visible
@@ -63,7 +66,7 @@ def create_steering_messages(packer, CP, CAN, enabled, lat_active, apply_torque,
     "LKA_RcgSta": lane_rcg,
     "LKA_LHLnWrnSta": 1 if left_lane_depart else 0,   # 1 = lane-departure warning (left)
     "LKA_RHLnWrnSta": 1 if right_lane_depart else 0,  # 1 = lane-departure warning (right)
-    "Damping_Gain": int(np.interp(v_ego, _DAMP_FACTOR_BP, _DAMP_FACTOR_V)),
+    "Damping_Gain": damp_gain,
   }
 
   ret = []
