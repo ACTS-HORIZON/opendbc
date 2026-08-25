@@ -19,9 +19,9 @@ This module is intentionally isolated so it is trivial to grep for and to remove
 
 # The panda hyundai_canfd safety hook hard-caps requested steer torque at this value
 # (opendbc/safety/modes/hyundai_canfd.h -> HYUNDAI_CANFD_STEERING_LIMITS.max_torque).
-# The GV60's stock STEER_MAX already equals this, so the live knob can only go DOWN unless
-# the panda firmware cap is raised and reflashed. Keep these two numbers in sync.
-PANDA_STEER_CAP = 409
+# Keep these two numbers in sync. Raised from stock 409 to 500 for max-steer testing
+# (HORIZON_DEV_MENU.md §A) — this widens the panda safety envelope; parked-test first.
+PANDA_STEER_CAP = 500
 
 # Damping_Gain valid range on the LFA message (Damping_Gain signal is [3, 200]).
 DAMP_GAIN_MIN = 3

@@ -143,7 +143,7 @@ static void hyundai_canfd_rx_hook(const CANPacket_t *msg) {
 
 static bool hyundai_canfd_tx_hook(const CANPacket_t *msg) {
   const TorqueSteeringLimits HYUNDAI_CANFD_STEERING_LIMITS = {
-    .max_torque = 409,
+    .max_torque = 500,  // Horizon Dev: raised from stock 409 for max-steer testing (HORIZON_DEV_MENU.md §A). Parked-test first.
     .max_rt_delta = 325,
     .max_rate_up = 10,
     .max_rate_down = 10,
