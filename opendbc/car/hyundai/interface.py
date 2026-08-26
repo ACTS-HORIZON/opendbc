@@ -31,7 +31,7 @@ class CarInterface(CarInterfaceBase):
 
   # GV60: measured open-loop, joystick route 0000003c, 2026-08
   GV60_LAF_BP = [5.0, 9.0, 13.0, 17.0, 30.0]   # m/s
-  GV60_LAF_V  = [2.70, 3.40, 3.50, 3.60, 3.80]
+  GV60_LAF_V  = [2.70, 3.30, 3.30, 3.60, 3.80]
 
   @staticmethod
   def torque_from_lateral_accel_gv60(latcontrol_inputs, torque_params, gravity_adjusted):
