@@ -236,6 +236,12 @@ class CarInterface(CarInterfaceBase):
 
     ret.intelligentCruiseButtonManagementAvailable = not (stock_cp.flags & HyundaiFlags.CANFD_ALT_BUTTONS)
 
+    # horizonpilot: allow battery preconditioning requests (0xC7) on the GV60 camera harness, where E-CAN is bus 0.
+    # The request is only sent on explicit user command; panda limits it to the known request/cancel/idle frames.
+    if stock_cp.carFingerprint == CAR.GENESIS_GV60_EV_1ST_GEN and stock_cp.flags & HyundaiFlags.CANFD and \
+       not lka_steering and CAN.ECAN == 0:
+      ret.safetyParam |= HyundaiSafetyFlagsSP.PRECOND
+
     return ret
 
   @staticmethod

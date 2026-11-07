@@ -4,6 +4,8 @@ import unittest
 
 from opendbc.car.hyundai.values import HyundaiSafetyFlags
 from opendbc.car.structs import CarParams
+from opendbc.safety.tests.libsafety import libsafety_py
+from opendbc.sunnypilot.car.hyundai.values import HyundaiSafetyFlagsSP
 import opendbc.safety.tests.common as common
 from opendbc.safety.tests.hyundai_common import HyundaiButtonBase, HyundaiLongitudinalBase
 
@@ -255,5 +257,54 @@ class TestHyundaiCanfdLFASteeringLongAltButtons(TestHyundaiCanfdLFASteeringLongB
   def test_acc_cancel(self):
     # Alt buttons does not use SCC_CONTROL to cancel if longitudinal
     pass
+class TestHyundaiCanfdLFASteeringPrecond(TestHyundaiCanfdLFASteeringBase):
+  """GV60-style camera harness (LFA steering, camera SCC, EV) with battery preconditioning TX enabled."""
+
+  TX_MSGS = TestHyundaiCanfdLFASteeringBase.TX_MSGS + [[0xC7, 0]]
+  GAS_MSG = ("ACCELERATOR", "ACCELERATOR_PEDAL")
+  SCC_BUS = 2
+  EXTRA_SAFETY_PARAM = HyundaiSafetyFlags.EV_GAS | HyundaiSafetyFlags.CAMERA_SCC
+  SAFETY_PARAM_SP = HyundaiSafetyFlagsSP.PRECOND
+
+  REQUEST = b"\x00\x00\x00\x40\x03\x00\x00\x00"
+  CANCEL = b"\x00\x00\x00\x00\x00\x00\x00\x00"
+  IDLE = b"\x00\x00\x00\xe0\x07\x00\x00\x00"
+
+  def setUp(self):
+    super().setUp()
+    self.safety.set_current_safety_param_sp(self.SAFETY_PARAM_SP)
+    self.safety.set_safety_hooks(self.SAFETY_MODEL, self.SAFETY_PARAM)
+    self.safety.init_tests()
+
+  def _precond_msg(self, dat, bus=0):
+    return libsafety_py.make_CANPacket(0xC7, bus, dat)
+
+  def test_precond_allowed_frames(self):
+    for controls_allowed in (True, False):
+      self.safety.set_controls_allowed(controls_allowed)
+      for dat in (self.REQUEST, self.CANCEL, self.IDLE):
+        self.assertTrue(self._tx(self._precond_msg(dat)))
+        for bus in (1, 2):
+          self.assertFalse(self._tx(self._precond_msg(dat, bus)))
+
+  def test_precond_rejects_other_payloads(self):
+    for i in range(8):
+      for val in (0x01, 0x40, 0x80, 0xff):
+        dat = bytearray(self.REQUEST)
+        if dat[i] == val:
+          continue
+        dat[i] = val
+        self.assertFalse(self._tx(self._precond_msg(bytes(dat))), f"byte {i} = {val:#x}")
+    # mixed request/idle halves
+    self.assertFalse(self._tx(self._precond_msg(b"\x00\x00\x00\x40\x07\x00\x00\x00")))
+    self.assertFalse(self._tx(self._precond_msg(b"\x00\x00\x00\xe0\x03\x00\x00\x00")))
+
+  def test_precond_blocked_without_flag(self):
+    self.safety.set_current_safety_param_sp(0)
+    self.safety.set_safety_hooks(self.SAFETY_MODEL, self.SAFETY_PARAM)
+    for dat in (self.REQUEST, self.CANCEL, self.IDLE):
+      self.assertFalse(self._tx(self._precond_msg(dat)))
+
+
 if __name__ == "__main__":
   unittest.main()

@@ -17,9 +17,15 @@
   {0x362, a_can, 32, .check_relay = (a_can) == 0},  /* CAM_0x362 */ \
 
 #define HYUNDAI_CANFD_LFA_STEERING_COMMON_TX_MSGS(e_can)  \
+  HYUNDAI_CANFD_PRECOND_TX_MSGS(e_can)                                  \
   {0x12A, e_can, 16, .check_relay = (e_can) == 0},  /* LFA */            \
   {0x1E0, e_can, 16, .check_relay = (e_can) == 0},  /* LFAHDA_CLUSTER */ \
   {0x1FA, e_can, 32, .check_relay = (e_can) == 0},  /* FR_CMR_02_100ms (ISLW/ISLA speed limit sign) */ \
+
+// horizonpilot: battery preconditioning request, same frame the head unit sends when navigating to a DC charger.
+// Not relayed by the car-side ECU we replace, so never relay-checked. Payload is checked in the tx hook.
+#define HYUNDAI_CANFD_PRECOND_TX_MSGS(e_can) \
+  {0xC7, e_can, 8, .check_relay = false},  /* BATTERY_PRECONDITIONING */ \
 
 #define HYUNDAI_CANFD_SCC_CONTROL_COMMON_TX_MSGS(e_can, longitudinal) \
   {0x1A0, e_can, 32, .check_relay = (longitudinal)},  /* SCC_CONTROL */ \
@@ -177,6 +183,19 @@ static bool hyundai_canfd_tx_hook(const CANPacket_t *msg) {
 
     bool allowed = (is_cancel && cruise_engaged_prev) || ((is_resume || is_set) && controls_allowed);
     if (!allowed) {
+      tx = false;
+    }
+  }
+
+  // battery preconditioning request: only when enabled for this car, and only the three known frames
+  // bytes 0-2 and 5-7 are always zero; bytes 3-4: 0x40 0x03 request, 0x00 0x00 cancel, 0xE0 0x07 idle
+  if (msg->addr == 0xC7U) {
+    bool zero_pad = (msg->data[0] == 0U) && (msg->data[1] == 0U) && (msg->data[2] == 0U) &&
+                    (msg->data[5] == 0U) && (msg->data[6] == 0U) && (msg->data[7] == 0U);
+    bool is_request = (msg->data[3] == 0x40U) && (msg->data[4] == 0x03U);
+    bool is_cancel = (msg->data[3] == 0x00U) && (msg->data[4] == 0x00U);
+    bool is_idle = (msg->data[3] == 0xE0U) && (msg->data[4] == 0x07U);
+    if (!hyundai_precond || !zero_pad || !(is_request || is_cancel || is_idle)) {
       tx = false;
     }
   }

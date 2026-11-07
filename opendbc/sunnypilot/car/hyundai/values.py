@@ -14,6 +14,7 @@ class HyundaiSafetyFlagsSP:
   LONG_MAIN_CRUISE_TOGGLEABLE = 2
   HAS_LDA_BUTTON = 4
   NON_SCC = 8
+  PRECOND = 16  # horizonpilot: allow battery preconditioning request (0xC7)
 
 
 class HyundaiFlagsSP(IntFlag):
