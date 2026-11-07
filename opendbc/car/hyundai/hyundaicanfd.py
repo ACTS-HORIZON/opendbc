@@ -195,8 +195,12 @@ def create_acc_control(packer, CAN, enabled, accel_last, accel, stopping, gas_ov
     acc_mode = 4 if main_cruise_enabled else 0
 
   # With no set speed, openpilot's hud setSpeed is V_CRUISE_UNSET (255 km/h), which is 158 in mph units.
-  # Stock reports VSetDis = 0 when it has no set speed, and keeps the last set speed in standby.
+  # Stock sends VSetDis = 0 with main off and keeps the last set speed in standby. Stock never sits in
+  # "main on, no speed set", so for that state send the all-ones invalid value (255) to get dashes
+  # instead of "0" (GV60 cluster shows "0 mph" for VSetDis = 0 in standby).
   set_speed_valid = 0 < hud_control.setSpeed * CV.MS_TO_KPH < 250
+  if not set_speed_valid:
+    set_speed = 255 if acc_mode == 4 else 0
 
   values = {
     "ACCMode": acc_mode,
@@ -204,7 +208,7 @@ def create_acc_control(packer, CAN, enabled, accel_last, accel, stopping, gas_ov
     "StopReq": 1 if tuning.stopping else 0,
     "aReqValue": tuning.actual_accel,
     "aReqRaw": tuning.actual_accel,
-    "VSetDis": set_speed if set_speed_valid else 0,
+    "VSetDis": set_speed,
     "JerkLowerLimit": tuning.jerk_lower,
     "JerkUpperLimit": tuning.jerk_upper,
 
