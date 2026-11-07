@@ -186,14 +186,20 @@ def create_acc_control(packer, CAN, enabled, accel_last, accel, stopping, gas_ov
     a_raw = accel  # noqa: F841
     a_val = np.clip(accel, accel_last - jn, accel_last + jn)  # noqa: F841
 
+  # Stock SCC_CONTROL ACCMode (GV60 camera SCC): 0 = main cruise off, 1 = engaged, 2 = gas override,
+  # 4 = main cruise on but not engaged (standby). The cluster draws the cruise readout only when ACCMode != 0,
+  # so sending 0 while main is on left the driver with no indication that cruise was ready.
+  if enabled:
+    acc_mode = 2 if gas_override else 1
+  else:
+    acc_mode = 4 if main_cruise_enabled else 0
+
   # With no set speed, openpilot's hud setSpeed is V_CRUISE_UNSET (255 km/h), which is 158 in mph units.
-  # Stock SCC reports VSetDis = 0 for "cruise on, no speed set" (see card/cruise.py), and the cluster
-  # shows the "---" cruise-ready readout for that. Some clusters (Genesis GV60) blank the whole cruise
-  # readout for the out-of-range value instead, so the driver can't tell whether main cruise is on.
+  # Stock reports VSetDis = 0 when it has no set speed, and keeps the last set speed in standby.
   set_speed_valid = 0 < hud_control.setSpeed * CV.MS_TO_KPH < 250
 
   values = {
-    "ACCMode": 0 if not enabled else (2 if gas_override else 1),
+    "ACCMode": acc_mode,
     "MainMode_ACC": 1 if main_cruise_enabled else 0,
     "StopReq": 1 if tuning.stopping else 0,
     "aReqValue": tuning.actual_accel,
