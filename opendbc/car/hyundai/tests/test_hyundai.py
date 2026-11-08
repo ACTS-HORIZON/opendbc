@@ -1,12 +1,14 @@
 import unittest
 
-from opendbc.car import gen_empty_fingerprint
+from opendbc.can import CANParser
+from opendbc.car import Bus, DT_CTRL, gen_empty_fingerprint, structs
+from opendbc.car.can_definitions import CanData
 from opendbc.car.structs import CarParams
 from opendbc.car.fw_versions import build_fw_dict
 from opendbc.car.hyundai.interface import CarInterface
 from opendbc.car.hyundai.hyundaicanfd import CanBus
 from opendbc.car.hyundai.radar_interface import RADAR_START_ADDR
-from opendbc.car.hyundai.values import CAR, DATE_FW_ECUS, \
+from opendbc.car.hyundai.values import CAR, DBC, DATE_FW_ECUS, \
                                          FW_QUERY_CONFIG, CANFD_FUZZY_WHITELIST, \
                                          PLATFORM_CODE_ECUS, HYUNDAI_VERSION_REQUEST_LONG, \
                                          HyundaiFlags, get_platform_codes, HyundaiSafetyFlags, \
@@ -267,3 +269,59 @@ class TestHyundaiFingerprint(unittest.TestCase):
         platforms_with_shared_codes.add(platform)
 
     assert platforms_with_shared_codes == excluded_platforms
+
+
+class TestHyundaiCanfdCameraSccFca(unittest.TestCase):
+  # real ADRV_0x160 frames from a GENESIS_GV60_EV_1ST_GEN camera (bus 2)
+  IDLE = bytes.fromhex("8f 6e 09 03 00 00 00 02 ff fc 01 00 00 00 00 00")
+  WARNING = bytes.fromhex("19 09 9f 43 00 00 01 22 35 63 01 05 00 00 00 00")
+  WARNING_LATER = bytes.fromhex("d3 35 c3 43 00 00 00 22 36 c9 00 05 00 00 00 00")
+
+  def _car_interface(self, alpha_long):
+    fingerprint = gen_empty_fingerprint()
+    CP = CarInterface.get_params(CAR.GENESIS_GV60_EV_1ST_GEN, fingerprint, [], alpha_long, False, False)
+    CP_SP = CarInterface.get_params_sp(CP, CAR.GENESIS_GV60_EV_1ST_GEN, fingerprint, [], alpha_long, False, False)
+    assert CP.flags & HyundaiFlags.CANFD_CAMERA_SCC
+    return CarInterface(CP, CP_SP)
+
+  def test_stock_fcw(self):
+    for alpha_long in (True, False):
+      CI = self._car_interface(alpha_long)
+      cam_bus = CanBus(CI.CP).CAM
+      now_nanos = 0
+      for frame, expected in ((self.IDLE, False), (self.WARNING, True), (self.WARNING_LATER, True), (self.IDLE, False)):
+        CS, _ = CI.update([(now_nanos, [CanData(0x160, frame, cam_bus)])])
+        self.assertEqual(expected, CS.stockFcw, frame.hex())
+        self.assertFalse(CS.stockAeb)
+        now_nanos += int(DT_CTRL * 1e9)
+
+  def test_no_positive_accel_during_fca_warning(self):
+    CI = self._car_interface(True)
+    CAN = CanBus(CI.CP)
+    parser = CANParser(DBC[CI.CP.carFingerprint][Bus.pt], [], CAN.ECAN)
+
+    CC = structs.CarControl()
+    CC.enabled = True
+    CC.longActive = True
+    CC.actuators.accel = 1.5
+    CC.actuators.longControlState = structs.CarControl.Actuators.LongControlState.pid
+    CC = CC.as_reader()
+    CC_SP = structs.CarControlSP()
+
+    now_nanos = 0
+    for frame, warning in ((self.IDLE, False), (self.WARNING, True), (self.IDLE, False)):
+      CI.update([(now_nanos, [CanData(0x160, frame, CAN.CAM)])])
+      a_req, adrv_0x160_sent = [], False
+      for _ in range(100):
+        _, sends = CI.apply(CC, CC_SP, now_nanos)
+        adrv_0x160_sent |= any(addr == 0x160 for addr, _, _ in sends)
+        parser.update([(now_nanos, [CanData(addr, dat, bus) for addr, dat, bus in sends if addr == 0x1a0])])
+        a_req.append((parser.vl["SCC_CONTROL"]["aReqValue"], parser.vl["SCC_CONTROL"]["aReqRaw"]))
+        now_nanos += int(DT_CTRL * 1e9)
+
+      # the camera's ADRV_0x160 is forwarded, openpilot must not send its own
+      self.assertFalse(adrv_0x160_sent)
+      if warning:
+        self.assertTrue(all(a_val <= 0 and a_raw <= 0 for a_val, a_raw in a_req), a_req)
+      else:
+        self.assertGreater(a_req[-1][0], 0)

@@ -261,12 +261,13 @@ static safety_config hyundai_canfd_init(uint16_t param) {
     {0x7D0, 0, 8, .check_relay = false},  // tester present for radar ECU disable
   };
 
-  // ADRV_0x160 is checked for relay malfunction
+  // ADRV_0x160 (stock FCA) is not sent: no ECU is disabled on camera SCC cars, so the camera's
+  // ADRV_0x160 is forwarded untouched. Relay malfunction is covered by LFA, LFAHDA_CLUSTER,
+  // FR_CMR_02_100ms, and SCC_CONTROL with longitudinal
 #define HYUNDAI_CANFD_LFA_STEERING_CAMERA_SCC_TX_MSGS(longitudinal) \
     HYUNDAI_CANFD_CRUISE_BUTTON_TX_MSGS(2) \
     HYUNDAI_CANFD_LFA_STEERING_COMMON_TX_MSGS(0) \
     HYUNDAI_CANFD_SCC_CONTROL_COMMON_TX_MSGS(0, (longitudinal)) \
-    {0x160, 0, 16, .check_relay = (longitudinal)}, /* ADRV_0x160 */ \
 
   hyundai_common_init(param);
 

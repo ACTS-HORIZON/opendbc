@@ -65,6 +65,7 @@ class CarState(CarStateBase, EsccCarStateBase, MadsCarState, CarStateExt):
 
     self.cruise_info = {}
     self.fr_cmr_02 = None
+    self.fca_warning = False
 
     # On some cars, CLU15->CF_Clu_VehicleSpeed can oscillate faster than the dash updates. Sample at 5 Hz
     self.cluster_speed = 0
@@ -296,6 +297,12 @@ class CarState(CarStateBase, EsccCarStateBase, MadsCarState, CarStateExt):
     self.lda_button = cp.vl[self.cruise_btns_msg_canfd]["LDA_BTN"]
     self.buttons_counter = cp.vl[self.cruise_btns_msg_canfd]["COUNTER"]
     ret.accFaulted = cp.vl["TCS"]["ACCEnable"] != 0  # 0 ACC CONTROL ENABLED, 1-3 ACC CONTROL DISABLED
+
+    # stock camera FCA warning. The camera's ADRV_0x160 is forwarded untouched by safety, also with openpilot long.
+    # The AEB braking field is not known, so stockAeb is not set
+    if self.CP.flags & HyundaiFlags.CANFD_CAMERA_SCC:
+      self.fca_warning = bool(cp_cam.vl["ADRV_0x160"]["FCA_WARNING"])
+      ret.stockFcw = self.fca_warning
 
     if self.CP.flags & HyundaiFlags.CANFD_LKA_STEER_MSG:
       self.lfa_block_msg = copy.copy(cp_cam.vl["CAM_0x362"] if self.CP.flags & HyundaiFlags.CANFD_LKA_STEER_MSG_ALT

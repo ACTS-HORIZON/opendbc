@@ -222,6 +222,7 @@ BO_ 352 ADRV_0x160: 16 ADRV
  SG_ CHECKSUM : 0|16@1+ (1,0) [0|65535] "" XXX
  SG_ COUNTER : 16|8@1+ (1,0) [0|255] "" XXX
  SG_ AEB_SETTING : 24|2@1+ (1,0) [0|255] "" XXX
+ SG_ FCA_WARNING : 30|1@1+ (1,0) [0|1] "" XXX
  SG_ SET_ME_2 : 56|8@1+ (1,0) [0|1] "" XXX
  SG_ SET_ME_FF : 64|8@1+ (1,0) [0|255] "" XXX
  SG_ SET_ME_FC : 72|8@1+ (1,0) [0|255] "" XXX
@@ -850,7 +851,9 @@ CM_ SG_ 298 FCA_LS_WrnSta "(Reverse Engineered) This signal was observed while E
 CM_ SG_ 298 LKA_UsmMod "This signal indicates LKA USM Mode";
 CM_ SG_ 298 ELK_SymbDisp "Emergency Lane-Keeping";
 CM_ SG_ 298 Damping_Gain "ADAS Damping Gain for MDPS";
+CM_ BO_ 352 "Stock FCA (forward collision avoidance) state. On camera SCC cars the camera sends this and it is forwarded; on radar SCC and LKA steering cars openpilot sends it with the SET_ME_* constants. On stock camera SCC cars bytes 8-10 (SET_ME_FF, SET_ME_FC, SET_ME_9) are live data, not constants: byte 8 is about closing speed x10 (m/s, 0xFF idle), bytes 9-10 hold a 9-bit countdown (0x1FC idle).";
 CM_ SG_ 352 SET_ME_9 "has something to do with AEB settings";
+CM_ SG_ 352 FCA_WARNING "Stock FCA forward collision warning active";
 CM_ SG_ 373 ACCEnable "Likely a copy of CAN's TCS13->ACCEnable";
 CM_ SG_ 373 DriverBraking "Likely derived from BRAKE->BRAKE_POSITION";
 CM_ SG_ 373 DriverBrakingLowSens "Higher threshold version of DriverBraking";

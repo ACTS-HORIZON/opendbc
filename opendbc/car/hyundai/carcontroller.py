@@ -241,9 +241,14 @@ class CarController(CarControllerBase, EsccCarController, LeadDataCarController,
     if self.CP.openpilotLongitudinalControl:
       if lka_steering:
         can_sends.extend(hyundaicanfd.create_adrv_messages(self.packer, self.CAN, self.frame))
-      else:
+      elif not self.CP.flags & HyundaiFlags.CANFD_CAMERA_SCC:
+        # camera SCC cars forward the camera's stock ADRV_0x160 (FCA) instead
         can_sends.extend(hyundaicanfd.create_fca_warning_light(self.packer, self.CAN, self.frame))
       if self.frame % 2 == 0:
+        # never request positive accel while the stock camera FCA is warning. Clamp what is packed into
+        # SCC_CONTROL (tuning.actual_accel, after jerk limiting) so nothing downstream can undo it
+        if self.CP.flags & HyundaiFlags.CANFD_CAMERA_SCC and CS.fca_warning:
+          self.tuning.actual_accel = min(self.tuning.actual_accel, 0.0)
         can_sends.append(hyundaicanfd.create_acc_control(self.packer, self.CAN, CC.enabled, self.accel_last, accel, stopping, CC.cruiseControl.override,
                                                          set_speed_in_units, hud_control, self.lead_data, CS.main_cruise_enabled, self.tuning))
         self.accel_last = accel

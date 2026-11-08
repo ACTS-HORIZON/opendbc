@@ -209,16 +209,31 @@ class TestHyundaiCanfdLKASteeringLongEV(HyundaiLongitudinalBase, TestHyundaiCanf
 # Tests longitudinal for ICE, hybrid, EV cars with LFA steering
 class TestHyundaiCanfdLFASteeringLongBase(HyundaiLongitudinalBase, TestHyundaiCanfdLFASteeringBase):
 
-  FWD_BLACKLISTED_ADDRS = {2: [0x12a, 0x1e0, 0x1fa, 0x1a0, 0x160]}
-
-  RELAY_MALFUNCTION_ADDRS = {0: (0x12A, 0x1E0, 0x1FA, 0x1a0, 0x160)}  # LFA, LFAHDA_CLUSTER, FR_CMR_02_100ms, SCC_CONTROL, ADRV_0x160
-
   DISABLED_ECU_UDS_MSG = (0x7D0, 0)
   DISABLED_ECU_ACTUATION_MSG = (0x1a0, 0)
 
   @property
   def SAFETY_PARAM(self):
     return HyundaiSafetyFlags.LONG | self.EXTRA_SAFETY_PARAM
+
+  @classmethod
+  def setUpClass(cls):
+    # Radar SCC disables the radar and sends its own ADRV_0x160. Camera SCC disables no ECU,
+    # so the camera's ADRV_0x160 (stock FCA) is forwarded untouched
+    cls.camera_scc = bool(getattr(cls, "EXTRA_SAFETY_PARAM", 0) & HyundaiSafetyFlags.CAMERA_SCC)
+    adrv_0x160 = () if cls.camera_scc else (0x160,)
+    cls.FWD_BLACKLISTED_ADDRS = {2: [0x12a, 0x1e0, 0x1fa, 0x1a0, *adrv_0x160]}
+    # LFA, LFAHDA_CLUSTER, FR_CMR_02_100ms, SCC_CONTROL, (radar SCC) ADRV_0x160
+    cls.RELAY_MALFUNCTION_ADDRS = {0: (0x12A, 0x1E0, 0x1FA, 0x1a0, *adrv_0x160)}
+    super().setUpClass()
+
+  def test_adrv_0x160_fwd(self):
+    if self.camera_scc:
+      self.assertEqual(0, self.safety.safety_fwd_hook(2, 0x160))
+      self.assertFalse(self._tx(common.make_msg(0, 0x160, 16)))
+    else:
+      self.assertEqual(-1, self.safety.safety_fwd_hook(2, 0x160))
+      self.assertTrue(self._tx(common.make_msg(0, 0x160, 16)))
 
   def _accel_msg(self, accel, aeb_req=False, aeb_decel=0):
     values = {
